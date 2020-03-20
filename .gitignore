@@ -44,9 +44,14 @@
 
 # Kernel Module Compile Results
 *.mod*
-*.cmd
 .tmp_versions/
 modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+src/pru/generated/*
+src/pru/build/*
+
+sourceme
+makeme
