@@ -17,7 +17,7 @@
 #include <stddef.h>
 #define compile_time_assert(cond, msg) typedef char msg[(cond) ? 1 : -1]
 
-#define PRU_NO 0
+#define PRU_NO 1
 
 #define FRAME_LEN 42
 typedef struct  {
@@ -306,7 +306,7 @@ int __inline hw_send_frame(volatile frame_t *msg) {
 #define GPIO1_CLKCTRL (0xAC / 4)
 
 void __inline gpio_warmup() {
-#if (PRU_NO == 0)
+#if (PRU_NO == 1)
     volatile uint32_t *ptr_gpio = GPIO_BASE;
     volatile uint32_t *ptr_cm = CM_PER_BASE;
 

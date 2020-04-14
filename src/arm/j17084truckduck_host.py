@@ -19,15 +19,20 @@ import sys
 import threading
 
 TARGET_PRU_FW = 'j17084truckduck.bin'
-TARGET_PRU_NO = 0
-TARGET_PRU_INTERRUPT = pypruss.PRU0_ARM_INTERRUPT
-TARGET_PRU_PRE_SIZE = 0
+TARGET_PRU_NO = 1
 UDP_PORTS = (6969, 6970)
 
 DDR_START = 0x10000000  # 256MiB
 DDR_VADDR = 0x4a300000
 DDR_SIZE = pypruss.ddr_size()
 DDR_END = DDR_START + DDR_SIZE
+
+if TARGET_PRU_NO == 0:
+    TARGET_PRU_INTERRUPT = pypruss.PRU0_ARM_INTERRUPT
+    TARGET_PRU_PRE_SIZE = 0
+else:
+    TARGET_PRU_INTERRUPT = pypruss.PRU1_ARM_INTERRUPT
+    TARGET_PRU_PRE_SIZE = 8192
 
 SHARED_ADDR = DDR_VADDR + TARGET_PRU_PRE_SIZE
 SHARED_OFFSET = SHARED_ADDR - DDR_START
@@ -46,7 +51,6 @@ SHARED_RECEIVE_CIRC_BUF_SIZE = RING_BUFFER_LEN
 SHARED_RECEIVE_BUF_OFFSET = 0  # must match the same in j17084truckduck.c
 SHARED_RECEIVE_BUF_LEN = 696  # must match the same in j17084truckduck.c
 SHARED_SEND_BUF_OFFSET = 704  # must match the same in j17084truckduck.c
-
 
 class PRU_read_thread(threading.Thread):
     def __init__(self, stopped, socket, ddr_mem):
@@ -163,12 +167,12 @@ except OSError as e:
 f = open("/dev/mem", "r+b")
 shared_mem = mmap.mmap(f.fileno(), SHARED_FILELEN, offset=SHARED_OFFSET)
 
-if TARGET_PRU_NO == 0:
+if TARGET_PRU_NO == 1:
     pypruss.init()
 
 pypruss.open(TARGET_PRU_NO)
 
-if TARGET_PRU_NO == 0:
+if TARGET_PRU_NO == 1:
     pypruss.pruintc_init()
 
 stopped = threading.Event()
