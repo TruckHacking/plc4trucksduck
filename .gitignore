@@ -50,6 +50,7 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
+src/arm/build/*
 src/pru/generated/*
 src/pru/build/*
 

@@ -1,0 +1,69 @@
+/*
+ * Originals Copyright (C) 2013 CircuitCo
+ *
+ * TruckCape DTS hacked together from CircuitCo pieces by Haystack in 2016
+ *
+ * Modified for PLC4TRUCKSDuck in 2020 to remove PRU and UART2 from this overlay.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+/dts-v1/;
+/plugin/;
+
+/ {
+    compatible = "ti,beaglebone", "ti,beaglebone-black";
+    part-number = "BB-TRUCKCAPE";
+    version = "00A0";
+
+    exclusive-use =
+    "P9.26",  /* dcan1: dcan1_tx */
+    "P9.24",  /* dcan1: dcan1_rx */
+    "P9.19",  /* dcan0: dcan0_rx */
+    "P9.20",  /* dcan0: dcan0_tx */
+    "dcan0",
+    "dcan1";
+
+    fragment@0 {
+        target = <&am33xx_pinmux>;
+        __overlay__ {
+            dcan0_pins_s0: pinmux_dcan0_pins_s0 {
+                pinctrl-single,pins = <
+                    0x178 0x12  /* d_can0_tx, SLEWCTRL_FAST | INPUT_PULLUP | MODE2 */
+                    0x17C 0x32  /* d_can0_rx, SLEWCTRL_FAST | RECV_ENABLE | INPUT_PULLUP | MODE2 */
+                >;
+            };
+        };
+    };
+
+    fragment@1 {
+        target = <&am33xx_pinmux>;
+        __overlay__ {
+            dcan1_pins_s0: pinmux_dcan1_pins_s0 {
+                pinctrl-single,pins = <
+                    0x180 0x12  /* uart1_rxd.d_can1_tx", OUTPUT | MODE2 */
+                    0x184 0x32  /* uart1_txd.d_can1_rx", INPUT_PULLUP | MODE2 */
+                >;
+            };
+        };
+    };
+
+    fragment@2 {
+        target = <&dcan0>;
+        __overlay__ {
+            status = "okay";
+            pinctrl-names = "default";
+            pinctrl-0 = <&dcan0_pins_s0>;
+        };
+    };
+
+    fragment@3 {
+        target = <&dcan1>;
+        __overlay__ {
+            status = "okay";
+            pinctrl-names = "default";
+            pinctrl-0 = <&dcan1_pins_s0>;
+        };
+    };
+};

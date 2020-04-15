@@ -1,0 +1,56 @@
+/* PLC4TRUCKSDuck (c) 2020 National Motor Freight Traffic Association
+*
+* PLC4TRUCKSDuck is licensed under a
+* Creative Commons Attribution-NonCommercial-NoDerivs 4.0 Unported License.
+*
+* You should have received a copy of the license along with this
+* work.  If not, see <http://creativecommons.org/licenses/by-nc-nd/4.0/>.
+*/
+
+/dts-v1/;
+/plugin/;
+
+/ {
+  compatible = "ti,beaglebone", "ti,beaglebone-black";
+  part-number = "BB-PLC4TRUCKSDUC"; /* 16 byte name limit */
+  version = "00A0";
+
+  exclusive-use =
+    "P9.12", /* J1708 GPIO Monitor */
+    "uart2", "P9.21", "P9.22", /* UART2 for J1708 */
+    "P9.29", /* PLC chirp synth */
+    "pru0", "pru1", "pruss";
+
+  fragment@0 {
+    target = <&am33xx_pinmux>;
+    __overlay__ {
+      j1708_pins: pinmux_j1708_pins {
+        pinctrl-single,pins = <
+          0x154 0x01  /* uart2_txd : MODE1 */
+          0x150 0x21  /* uart2_rxd : MODE1|RX_ACTIVE */
+          0x078 0x27  /* gpio1[28] : MODE7|RX_ACTIVE */
+        >;
+      };
+    };
+  };
+
+  fragment@1 {
+    target = <&am33xx_pinmux>;
+    __overlay__ {
+      plc_pins: pinmux_plc_pins {
+        pinctrl-single,pins = <
+          0x194 0x06  /* pr1_pru0_pru_r31_1 : MODE6 */
+        >;
+      };
+    };
+  };
+
+  fragment@2 {
+    target = <&pruss>;
+    __overlay__ {
+      status = "okay";
+      pinctrl-names = "default";
+      pinctrl-0 = <&j1708_pins &plc_pins>;
+    };
+  };
+};
