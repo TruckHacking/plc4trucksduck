@@ -39,7 +39,7 @@
     __overlay__ {
       plc_pins: pinmux_plc_pins {
         pinctrl-single,pins = <
-          0x194 0x06  /* pr1_pru0_pru_r31_1 : MODE6 */
+          0x194 0x05  /* pr1_pru0_pru_r30_1 : MODE5 */
         >;
       };
     };
