@@ -19,86 +19,108 @@
 
 #define PRU_NO 0
 
-#define FRAME_LEN 42
+#define RX_FRAME_LEN 4
 typedef struct  {
     uint8_t volatile length;
-    uint8_t volatile payload[FRAME_LEN];
-} frame_t;
+    uint8_t volatile payload[RX_FRAME_LEN];
+} rx_frame_t;
 
-#define RING_BUFFER_LEN 16
+#define RX_RING_BUFFER_LEN 4
 typedef struct {
     uint32_t volatile produce;
     uint32_t volatile consume;
-    frame_t volatile frames[RING_BUFFER_LEN];
-} ring_buffer_t;
+    rx_frame_t volatile frames[RX_RING_BUFFER_LEN];
+} rx_ring_buffer_t;
 
-#define RING_BUFFER_CONSUME_OFFSET 4
+#define TX_FRAME_LEN 42
 /* must match the same in plc4trucksduck_host.py */
-compile_time_assert(RING_BUFFER_CONSUME_OFFSET ==
-                    offsetof(ring_buffer_t, consume), ring_buf_consume_offset_must_be_4);
+compile_time_assert(TX_FRAME_LEN == 42, tx_frame_len_must_be_42);
 
-#define RING_BUFFER_FRAMES_OFFSET 8
+#define TX_FRAME_PREAMBLE_LEN 8
+
+typedef struct  {
+    uint8_t volatile bit_length;
+    uint8_t volatile preamble; /* all the bits, without prepended 00, 0 or appended 1*/
+    uint8_t volatile payload[TX_FRAME_LEN]; /* all the bits, including checksum, without 11111 prepended or 1111111 appended */
+} tx_frame_t;
+
+#define TX_RING_BUFFER_LEN 16
+typedef struct {
+    uint32_t volatile produce;
+    uint32_t volatile consume;
+    tx_frame_t volatile frames[TX_RING_BUFFER_LEN];
+} tx_ring_buffer_t;
+
+#define CHIRP_SLEEPS_LEN 52
+typedef struct {
+    uint8_t length;
+    uint16_t sleeps[CHIRP_SLEEPS_LEN];
+} chirp_sleeps_t;
+#define CHIRP_SLEEPS_SIZE sizeof(chirp_sleeps_t)
+
+#define RX_RING_BUFFER_CONSUME_OFFSET 4
 /* must match the same in plc4trucksduck_host.py */
-compile_time_assert(RING_BUFFER_FRAMES_OFFSET ==
-                    offsetof(ring_buffer_t, frames), ring_buf_frames_offset_must_be_8);
+compile_time_assert(RX_RING_BUFFER_CONSUME_OFFSET ==
+                    offsetof(rx_ring_buffer_t, consume), rx_ring_buf_consume_offset_must_be_4);
+
+#define RX_RING_BUFFER_FRAMES_OFFSET 8
+/* must match the same in plc4trucksduck_host.py */
+compile_time_assert(RX_RING_BUFFER_FRAMES_OFFSET ==
+                    offsetof(rx_ring_buffer_t, frames), rx_ring_buf_frames_offset_must_be_8);
+
+#define TX_RING_BUFFER_CONSUME_OFFSET 4
+/* must match the same in plc4trucksduck_host.py */
+compile_time_assert(TX_RING_BUFFER_CONSUME_OFFSET ==
+                    offsetof(tx_ring_buffer_t, consume), tx_ring_buf_consume_offset_must_be_4);
+
+#define TX_RING_BUFFER_FRAMES_OFFSET 8
+/* must match the same in plc4trucksduck_host.py */
+compile_time_assert(TX_RING_BUFFER_FRAMES_OFFSET ==
+                    offsetof(tx_ring_buffer_t, frames), tx_ring_buf_frames_offset_must_be_8);
+
+#define TX_FRAME_BIT_LEN_OFFSET 0
+/* must match the same in plc4trucksduck_host.py */
+compile_time_assert(TX_FRAME_BIT_LEN_OFFSET ==
+                    offsetof(tx_frame_t, bit_length), tx_frame_bitlen_offset_must_be_0);
+
+#define TX_FRAME_PREAMBLE_OFFSET 1
+/* must match the same in plc4trucksduck_host.py */
+compile_time_assert(TX_FRAME_PREAMBLE_OFFSET ==
+                    offsetof(tx_frame_t, preamble), tx_frame_preamble_offset_must_be_1);
+
+#define TX_FRAME_PAYLOAD_OFFSET 2
+/* must match the same in plc4trucksduck_host.py */
+compile_time_assert(TX_FRAME_PAYLOAD_OFFSET ==
+                    offsetof(tx_frame_t, payload), tx_frame_payload_offset_must_be_2);
 
 #define SHARED_RECEIVE_BUF_OFFSET 0
 /* must match the same in plc4trucksduck_host.py */
 compile_time_assert(SHARED_RECEIVE_BUF_OFFSET == 0, rx_buf_start_must_be_0);
-#define SHARED_RECEIVE_BUF_LEN sizeof(ring_buffer_t)
+#define SHARED_RECEIVE_BUF_SIZE sizeof(rx_ring_buffer_t)
 /* must match the same in plc4trucksduck_host.py */
-compile_time_assert(SHARED_RECEIVE_BUF_LEN == 696 , rx_buf_len_must_be_696);
+compile_time_assert(SHARED_RECEIVE_BUF_SIZE == 28 , rx_buf_len_must_be_28);
 
-#define SHARED_SEND_BUF_OFFSET 704
+#define SHARED_SEND_BUF_OFFSET 28
+/* must start after the receive buffer */
+compile_time_assert(SHARED_SEND_BUF_OFFSET >= SHARED_RECEIVE_BUF_SIZE, tx_buf_must_be_after_rx_buf);
 /* must match the same in plc4trucksduck_host.py */
-compile_time_assert(SHARED_SEND_BUF_OFFSET == 704, tx_buf_start_must_be_704);
+compile_time_assert(SHARED_SEND_BUF_OFFSET == 28, tx_buf_start_must_be_28);
 /* must match the same in plc4trucksduck_host.py */
-#define SHARED_SEND_BUF_LEN sizeof(ring_buffer_t)
-compile_time_assert(SHARED_SEND_BUF_LEN == 696, tx_buf_len_must_be_696);
+#define SHARED_SEND_BUF_SIZE sizeof(tx_ring_buffer_t)
+compile_time_assert(SHARED_SEND_BUF_SIZE == 712, tx_buf_len_must_be_696);
+
+compile_time_assert(SHARED_RECEIVE_BUF_SIZE + SHARED_SEND_BUF_SIZE + CHIRP_SLEEPS_SIZE + 256 /*stack size*/ + 0 /*heap size*/ < 8192 /*PRU RAM size*/, bufs_must_be_less_than_ram);
 
 int __inline signal_frame_received();
 
-void __inline hw_wait_for_bus();
-int __inline hw_is_bus_available();
-uint8_t __inline hw_wait_and_read_char();
-
 int __inline receive_frame() {
-    ring_buffer_t *rx_buf = (ring_buffer_t*) SHARED_RECEIVE_BUF_OFFSET;
     int ret = 0;
-
-    for (int i = 0; i < FRAME_LEN; ++i) {
-        uint32_t tmp_produce = rx_buf->produce;
-        uint32_t tmp_consume = rx_buf->consume;
-
-        if ((tmp_produce + 1) % RING_BUFFER_LEN == tmp_consume) {
-            hw_wait_for_bus();
-            /* Buffer is full
-             * TODO better error logging,
-             * return non-zero here */
-            break;
-        }
-
-        rx_buf->frames[tmp_produce].payload[i] = hw_wait_and_read_char();
-
-        /* TODO: probably better to terminate a frame when the most recent
-         * bytes match the checksum of the previous bytes instead of testing
-         * for bus idleness here. Sometimes we receive extra bytes appended to
-         * the received frames */
-        if (hw_is_bus_available()) {
-            rx_buf->frames[tmp_produce].length = i + 1;
-            rx_buf->produce = (tmp_produce + 1) % RING_BUFFER_LEN;
-
-            signal_frame_received();
-            break;
-        }
-    }
-
     return ret;
 }
 
 /* returns non-zero if there is a pending frame to send */
 int __inline is_frame_to_send() {
-    ring_buffer_t *tx_buf = (ring_buffer_t*) SHARED_SEND_BUF_OFFSET;
+    tx_ring_buffer_t *tx_buf = (tx_ring_buffer_t*) SHARED_SEND_BUF_OFFSET;
 
     if (tx_buf->produce == tx_buf->consume) {
         return 0;
@@ -106,10 +128,10 @@ int __inline is_frame_to_send() {
     return 1;
 }
 
-int __inline hw_send_frame(volatile frame_t *msg);
+int __inline hw_send_frame(volatile tx_frame_t *msg);
 
 int __inline send_next_frame() {
-    ring_buffer_t *tx_buf = (ring_buffer_t*) SHARED_SEND_BUF_OFFSET;
+    tx_ring_buffer_t *tx_buf = (tx_ring_buffer_t*) SHARED_SEND_BUF_OFFSET;
     int err = 0;
 
     if (!is_frame_to_send()) {
@@ -119,7 +141,7 @@ int __inline send_next_frame() {
     err = hw_send_frame(tx_buf->frames + tx_buf->consume);
 
     if (!err) {
-        tx_buf->consume = (tx_buf->consume + 1) % RING_BUFFER_LEN;
+        tx_buf->consume = (tx_buf->consume + 1) % TX_RING_BUFFER_LEN;
     }
 
     return err;
@@ -155,210 +177,334 @@ int __inline signal_frame_received() {
     return 0;
 }
 
-#define CM_PER_BASE ((volatile uint32_t *)(0x44E00000))
-/* using UART4 */
-#define UARTX_CLKCTRL (0x78 / 4)
-#define CLKCTRL_ON 2
-#define WARMUP_CYCLES 100
-
-void __inline gpio_warmup();
-
 void __inline hw_warmup() {
-    volatile uint32_t *ptr_cm = CM_PER_BASE;
-
-    ptr_cm[UARTX_CLKCTRL] = CLKCTRL_ON;
-    while(ptr_cm[UARTX_CLKCTRL] & 0x00300000) {
-        __delay_cycles(WARMUP_CYCLES);
-    }
-
-    gpio_warmup();
-}
-
-#define UART_BASE ((volatile uint16_t *)(0x481A8000)) /* UART4 */
-#define UART_SYSC (0x54 / 2)
-#define UART_SYSS (0x58 / 2)
-#define UART_LCR  (0x0C / 2)
-#define UART_EFR  (0x08 / 2)
-#define UART_MCR  (0x10 / 2)
-#define UART_FCR  (0x08 / 2)
-#define UART_TLR  (0x1C / 2)
-#define UART_SCR  (0x40 / 2)
-#define UART_MDR1 (0x20 / 2)
-#define UART_IER  (0x04 / 2)
-#define UART_DLL  (0x00 / 2)
-#define UART_DLH  (0x04 / 2)
-#define UART_LSR  (0x14 / 2)
-#define UART_RHR  (0x00 / 2)
-#define UART_THR  (0x00 / 2)
-
-void __inline hw_init() {
-    /* UART init as per spruh73q */
-    volatile uint16_t *ptr_uart = UART_BASE;
-
-    ptr_uart[UART_SYSC] = 0x1;
-
-    while((ptr_uart[UART_SYSS] & 0x1) == 0) {
-        __delay_cycles(10000);
-    }
-    ptr_uart[UART_LCR] |= 0x40;
-
-    uint16_t saved_lcr = ptr_uart[UART_LCR];
-    ptr_uart[UART_LCR] = 0x00BF;
-
-    uint16_t saved_efr = ptr_uart[UART_EFR];
-    ptr_uart[UART_EFR] = (saved_efr | 0x10);
-
-    ptr_uart[UART_LCR] = 0x80;
-
-    uint16_t saved_mcr = ptr_uart[UART_MCR];
-    ptr_uart[UART_MCR] = (saved_mcr | 0x40);
-
-    ptr_uart[UART_FCR] = 0x3;
-    ptr_uart[UART_LCR] = 0xBF;
-    ptr_uart[UART_TLR] = 0x88;
-    ptr_uart[UART_SCR] = 0xC0;
-
-    ptr_uart[UART_EFR] = saved_efr;
-    ptr_uart[UART_LCR] = 0x80;
-    ptr_uart[UART_MCR] = saved_mcr;
-    ptr_uart[UART_LCR] = saved_lcr;
-
-    uint16_t saved_reg = ptr_uart[UART_MDR1];
-    ptr_uart[UART_MDR1] = (saved_reg & 0xFFF8) | 0x7;
-
-    ptr_uart[UART_LCR] = 0x00BF;
-    saved_efr = ptr_uart[UART_EFR];
-    ptr_uart[UART_EFR] = (saved_efr | 0x10);
-
-    ptr_uart[UART_LCR] = 0x00;
-    ptr_uart[UART_IER] = 0x00;
-    ptr_uart[UART_LCR] = 0xBF;
-
-    ptr_uart[UART_DLL] = 0x38;
-    ptr_uart[UART_DLH] = 0x01;
-
-    ptr_uart[UART_LCR] = 0x00;
-    ptr_uart[UART_IER] = 0x00;
-    ptr_uart[UART_LCR] = 0xBF;
-
-    ptr_uart[UART_EFR] = saved_efr;
-    ptr_uart[UART_LCR] = 0x03;
-
-    saved_reg = ptr_uart[UART_MDR1];
-    ptr_uart[UART_MDR1] = (saved_reg & 0xFFF8);
-
-    hw_wait_for_bus();
-
-    /* drain RX FIFO */
-    volatile uint8_t *ptr_rhr = (uint8_t*) UART_BASE + UART_RHR;
-    volatile uint8_t rx;
-    while (ptr_uart[UART_LSR] & (1 << 0)) {
-        rx = *ptr_rhr;
-    }
-    rx |= 0xff; // avoid optimize-away
-
     return;
 }
 
-#define READ_CYCLES 60 /* anything fast: e.g. 300ns at 200MHz */
-
-uint8_t __inline hw_wait_and_read_char() {
-    volatile uint16_t *ptr_uart = UART_BASE;
-    volatile uint8_t *ptr_rhr = (uint8_t*) UART_BASE + UART_RHR;
-
-    while(!(ptr_uart[UART_LSR] & (1 << 0))) {
-        __delay_cycles(READ_CYCLES);
-    }
-    return *ptr_rhr;
+void __inline hw_init() {
+    asm("	clr r30, r30, 1");
+    return;
 }
 
-#define SEND_CYCLES 200 /*something fast for polling in a hotloop */
+void __inline emit_pos_symbol() {
+    asm("   set r30, r30, 1");
+    __delay_cycles(484);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(467);
+    asm("   set r30, r30, 1");
+    __delay_cycles(452);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(437);
+    asm("   set r30, r30, 1");
+    __delay_cycles(426);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(414);
+    asm("   set r30, r30, 1");
+    __delay_cycles(403);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(393);
+    asm("   set r30, r30, 1");
+    __delay_cycles(384);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(375);
+    asm("   set r30, r30, 1");
+    __delay_cycles(368);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(360);
+    asm("   set r30, r30, 1");
+    __delay_cycles(353);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(346);
+    asm("   set r30, r30, 1");
+    __delay_cycles(340);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(334);
+    asm("   set r30, r30, 1");
+    __delay_cycles(328);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(323);
+    asm("   set r30, r30, 1");
+    __delay_cycles(318);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(312);
+    asm("   set r30, r30, 1");
+    __delay_cycles(309);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(303);
+    asm("   set r30, r30, 1");
+    __delay_cycles(300);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(295);
+    asm("   set r30, r30, 1");
+    __delay_cycles(291);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(288);
+    asm("   set r30, r30, 1");
+    __delay_cycles(284);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(280);
+    asm("   set r30, r30, 1");
+    __delay_cycles(277);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(274);
+    asm("   set r30, r30, 1");
+    __delay_cycles(270);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(268);
+    asm("   set r30, r30, 1");
+    __delay_cycles(264);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(262);
+    asm("   set r30, r30, 1");
+    __delay_cycles(259);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(256);
+    asm("   set r30, r30, 1");
+    __delay_cycles(254);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(249);
+    asm("   set r30, r30, 1");
+    __delay_cycles(325);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(542);
+    asm("   set r30, r30, 1");
+    __delay_cycles(592);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(582);
+    asm("   set r30, r30, 1");
+    __delay_cycles(573);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(563);
+    asm("   set r30, r30, 1");
+    __delay_cycles(555);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(546);
+    asm("   set r30, r30, 1");
+    __delay_cycles(538);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(531);
+    asm("   set r30, r30, 1");
+    __delay_cycles(523);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(517);
+    asm("   set r30, r30, 1");
+    __delay_cycles(509);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(504);
+}
 
-int __inline hw_send_frame(volatile frame_t *msg) {
-    volatile uint16_t *ptr_uart = UART_BASE;
+void __inline emit_neg_symbol() {
+    asm("   clr r30, r30, 1");
+    __delay_cycles(484);
+    asm("   set r30, r30, 1");
+    __delay_cycles(467);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(452);
+    asm("   set r30, r30, 1");
+    __delay_cycles(437);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(426);
+    asm("   set r30, r30, 1");
+    __delay_cycles(414);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(403);
+    asm("   set r30, r30, 1");
+    __delay_cycles(393);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(384);
+    asm("   set r30, r30, 1");
+    __delay_cycles(375);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(368);
+    asm("   set r30, r30, 1");
+    __delay_cycles(360);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(353);
+    asm("   set r30, r30, 1");
+    __delay_cycles(346);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(340);
+    asm("   set r30, r30, 1");
+    __delay_cycles(334);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(328);
+    asm("   set r30, r30, 1");
+    __delay_cycles(323);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(318);
+    asm("   set r30, r30, 1");
+    __delay_cycles(312);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(309);
+    asm("   set r30, r30, 1");
+    __delay_cycles(303);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(300);
+    asm("   set r30, r30, 1");
+    __delay_cycles(295);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(291);
+    asm("   set r30, r30, 1");
+    __delay_cycles(288);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(284);
+    asm("   set r30, r30, 1");
+    __delay_cycles(280);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(277);
+    asm("   set r30, r30, 1");
+    __delay_cycles(274);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(270);
+    asm("   set r30, r30, 1");
+    __delay_cycles(268);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(264);
+    asm("   set r30, r30, 1");
+    __delay_cycles(262);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(259);
+    asm("   set r30, r30, 1");
+    __delay_cycles(256);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(254);
+    asm("   set r30, r30, 1");
+    __delay_cycles(249);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(325);
+    asm("   set r30, r30, 1");
+    __delay_cycles(542);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(592);
+    asm("   set r30, r30, 1");
+    __delay_cycles(582);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(573);
+    asm("   set r30, r30, 1");
+    __delay_cycles(563);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(555);
+    asm("   set r30, r30, 1");
+    __delay_cycles(546);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(538);
+    asm("   set r30, r30, 1");
+    __delay_cycles(531);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(523);
+    asm("   set r30, r30, 1");
+    __delay_cycles(517);
+    asm("   clr r30, r30, 1");
+    __delay_cycles(509);
+    asm("   set r30, r30, 1");
+    __delay_cycles(504);
+}
+
+int __inline return_debug_info() {
+    rx_ring_buffer_t *rx_buf = (rx_ring_buffer_t*) SHARED_RECEIVE_BUF_OFFSET;
     int ret = 0;
+    uint8_t rx_placebo;
 
-    for (int i = 0; i < msg->length; ++i) {
-        ptr_uart[UART_THR] = msg->payload[i];
+    uint32_t tmp_produce = rx_buf->produce;
+    uint32_t tmp_consume = rx_buf->consume;
 
-        while(ptr_uart[UART_LSR] & (1 << 6)) { /* wait for tx complete */
-            __delay_cycles(SEND_CYCLES);
-        }
-
-        uint8_t rx = hw_wait_and_read_char();
-        if (rx != msg->payload[i]) {
-            /* TODO: better error logging
-             * and: implement arbitration
-             * or return non-zero here */
-            break;
-        }
+    rx_placebo = 99;
+    if ((tmp_produce + 1) % RX_RING_BUFFER_LEN == tmp_consume) {
+        /* Buffer is full
+         * TODO return non-zero here */
+        rx_placebo = 17;
+        ret = 0;
     }
+
+    rx_buf->frames[tmp_produce].payload[0] = rx_placebo;
+    rx_buf->frames[tmp_produce].length = 0 + 1;
+    rx_buf->produce = (tmp_produce + 1) % RX_RING_BUFFER_LEN;
+
+    signal_frame_received();
 
     return ret;
 }
 
+#define PREAMBLE_EXTRA_CYCLES 2800 // 14us at 200MHz
+#define PREAMBLE_TOTAL_CYCLES 22800 // 114us at 200MHz
 
-#define GPIO_BASE ((volatile uint32_t *)(0x4804C000)) /* Using GPIO1 */
-#define GPIO_CTRL (0x130 / 4)
-#define GPIO_DATAIN (0x138 / 4)
-#define GPIO_PIN (1 << 18)
-
-#define GPIO1_CLKCTRL (0xAC / 4)
-
-void __inline gpio_warmup() {
-#if (PRU_NO == 1)
-    volatile uint32_t *ptr_gpio = GPIO_BASE;
-    volatile uint32_t *ptr_cm = CM_PER_BASE;
-
-    ptr_cm[GPIO1_CLKCTRL] = CLKCTRL_ON;
-    while(ptr_cm[GPIO1_CLKCTRL] & 0x00300000) {
-        __delay_cycles(WARMUP_CYCLES);
-    }
-
-    ptr_gpio[GPIO_CTRL] = 0; /* gating enabled, no divs */
-#endif
+void __inline emit_preamble_neg() {
+    emit_pos_symbol();
+    __delay_cycles(PREAMBLE_EXTRA_CYCLES);
 }
 
-int __inline read_gpio_pin() {
-    volatile uint32_t *ptr_gpio = GPIO_BASE;
-
-    return ptr_gpio[GPIO_DATAIN] & GPIO_PIN;
+void __inline emit_preamble_pos() {
+    asm("   clr r30, r30, 1");
+    __delay_cycles(PREAMBLE_TOTAL_CYCLES);
 }
 
-#define AVAILABLE_CYCLES 10400 /* 52us at 200MHz */
-#define AVAILABLE_ATTEMPTS 20
+#define FAST_GPIO_BIT (1 << 1)
+#define BUS_ACCESS_IDLE_CYCLES (12 * PREAMBLE_TOTAL_CYCLES)
 
-/* returns non-zero if the PLC bus is available at present */
-int __inline hw_is_bus_available() {
-    for(int i =0; i < AVAILABLE_ATTEMPTS; ++i) {
-        if (read_gpio_pin() == 0) {
-            return 0;
+//TODO tune the delays to account for the loop overhead
+int __inline hw_send_preamble(volatile tx_frame_t *msg) {
+    emit_preamble_neg();
+    emit_preamble_neg();
+    emit_preamble_neg();
+    for(int i=0; i < TX_FRAME_PREAMBLE_LEN; ++i) {
+        if(msg->preamble & (1 << i)) {
+            emit_preamble_pos();
         } else {
-            __delay_cycles(AVAILABLE_CYCLES);
+            emit_preamble_neg();
         }
     }
-    return 1;
+    emit_preamble_pos();
+
+    return 0;
 }
 
-#define WAIT_CYCLES 10400 /* 52us at 200MHz */
-#define WAIT_ATTEMPTS 13 /* lucky wait number */
-
-void __inline hw_wait_for_bus() {
-    for(int i = 1; i < WAIT_ATTEMPTS; ++i) {
-        if (!read_gpio_pin()) {
-            i = 1;
-            continue;
-        }
-        __delay_cycles(WAIT_CYCLES);
+//TODO tune the delays to account for the loop overhead
+int __inline hw_send_payload(volatile tx_frame_t *msg) {
+    for(int i=0; i < 5; ++i) {
+        emit_pos_symbol();
     }
+    for(int i=0; i < msg->bit_length; ++i) {
+        if(msg->payload[ ((int) i / 8) ] & (i << (i % 8))) {
+            emit_pos_symbol();
+        } else {
+            emit_neg_symbol();
+        }
+    }
+    for(int i=0; i < 7; ++i) {
+        emit_pos_symbol();
+    }
+
+    return 0;
+}
+
+int __inline hw_send_frame(volatile tx_frame_t *msg) {
+    // TODO: remove this fixed lamp on message
+    // msg->preamble = 0x0a;
+    // msg->bit_length = 30;
+    // msg->payload[0] = 0xfb;
+    // msg->payload[1] = 0x20;
+    // msg->payload[2] = 0x08;
+    // msg->payload[3] = 0x50;
+
+    // TODO: we might need to mask interrupts in this area.
+    // TX gets unexpectedly long sometimes
+    // send preamble
+    hw_send_preamble(msg);
+    // send payload (and checksum)
+    hw_send_payload(msg);
+    // sleep for bus access idle time
+    asm("   clr r30, r30, 1");
+    __delay_cycles(BUS_ACCESS_IDLE_CYCLES);
+
+    return return_debug_info();
 }
 
 void ringbuff_init() {
-    ring_buffer_t *rx_buf = (ring_buffer_t*) SHARED_RECEIVE_BUF_OFFSET;
-    ring_buffer_t *tx_buf = (ring_buffer_t*) SHARED_SEND_BUF_OFFSET;
+    rx_ring_buffer_t *rx_buf = (rx_ring_buffer_t*) SHARED_RECEIVE_BUF_OFFSET;
+    tx_ring_buffer_t *tx_buf = (tx_ring_buffer_t*) SHARED_SEND_BUF_OFFSET;
 
-    memset((void *) rx_buf, 0, SHARED_RECEIVE_BUF_LEN);
-    memset((void *) tx_buf, 0, SHARED_SEND_BUF_LEN);
+    memset((void *) rx_buf, 0, SHARED_RECEIVE_BUF_SIZE);
+    memset((void *) tx_buf, 0, SHARED_SEND_BUF_SIZE);
 
     return;
 }
@@ -375,16 +521,8 @@ void main() {
     hw_init();
 
     while (1) {
-        if (hw_is_bus_available()) {
-            if (send_next_frame()) {
-                /* TODO error handling better than 'die' */
-                break;
-            }
-        } else {
-            if (receive_frame()) {
-                /* TODO error handling better than 'die' */
-                break;
-            }
+        if (send_next_frame()) {
+            break;
         }
     }
 

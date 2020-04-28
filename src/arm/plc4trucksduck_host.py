@@ -17,6 +17,8 @@ import socket
 import struct
 import sys
 import threading
+import time
+import bitstring
 
 TARGET_PRU_FW = 'plc4trucksduck.bin'
 TARGET_PRU_NO = 0
@@ -38,19 +40,71 @@ SHARED_ADDR = DDR_VADDR + TARGET_PRU_PRE_SIZE
 SHARED_OFFSET = SHARED_ADDR - DDR_START
 SHARED_FILELEN = DDR_SIZE + DDR_START
 
-FRAME_LEN = 42  # must match the same in plc4trucksduck.c
-RING_BUFFER_LEN = 16  # must match the same in plc4trucksduck.c
-RING_BUFFER_CONSUME_OFFSET = 4  # must match the same in plc4trucksduck.c
-RING_BUFFER_FRAMES_OFFSET = 8  # must match the same in plc4trucksduck.c
+TX_FRAME_LEN = 42  # must match the same in plc4trucksduck.c
+TX_RING_BUFFER_LEN = 16  # must match the same in plc4trucksduck.c
+TX_RING_BUFFER_CONSUME_OFFSET = 4  # must match the same in plc4trucksduck.c
+TX_RING_BUFFER_FRAMES_OFFSET = 8  # must match the same in plc4trucksduck.c
+TX_FRAME_BIT_LEN_OFFSET = 0  # must match the same in plc4trucksduck.c
+TX_FRAME_PREAMBLE_OFFSET = 1  # must match the same in plc4trucksduck.c
+TX_FRAME_PAYLOAD_OFFSET = 2  # must match the same in plc4trucksduck.c
 
-SHARED_SEND_FRAME_LEN = FRAME_LEN
-SHARED_RECEIVE_FRAME_LEN = FRAME_LEN
-SHARED_SEND_CIRC_BUF_SIZE = RING_BUFFER_LEN
-SHARED_RECEIVE_CIRC_BUF_SIZE = RING_BUFFER_LEN
+RX_FRAME_LEN = 4  # must match the same in plc4trucksduck.c
+RX_RING_BUFFER_LEN = 4  # must match the same in plc4trucksduck.c
+RX_RING_BUFFER_CONSUME_OFFSET = 4  # must match the same in plc4trucksduck.c
+RX_RING_BUFFER_FRAMES_OFFSET = 8  # must match the same in plc4trucksduck.c
+
+SHARED_SEND_FRAME_LEN = TX_FRAME_LEN
+SHARED_RECEIVE_FRAME_LEN = RX_FRAME_LEN
+SHARED_SEND_CIRC_BUF_SIZE = TX_RING_BUFFER_LEN
+SHARED_RECEIVE_CIRC_BUF_SIZE = RX_RING_BUFFER_LEN
 
 SHARED_RECEIVE_BUF_OFFSET = 0  # must match the same in plc4trucksduck.c
-SHARED_RECEIVE_BUF_LEN = 696  # must match the same in plc4trucksduck.c
-SHARED_SEND_BUF_OFFSET = 704  # must match the same in plc4trucksduck.c
+SHARED_RECEIVE_BUF_SIZE = 28  # must match the same in plc4trucksduck.c
+SHARED_SEND_BUF_OFFSET = 28  # must match the same in plc4trucksduck.c
+
+def get_checksum_bits(payload):
+    msg = str(bitstring.ConstBitArray(bytes=payload).bin)
+    checksum = 0
+    for n in range(0,len(msg),8):
+        checksum = checksum + int(msg[n:n+8],2)
+
+    # Two's Complement (10)
+    binint = int("{0:b}".format(checksum))             # Convert to binary (1010)
+    flipped = ~binint                                  # Flip the bits (-1011)
+    flipped += 1                                       # Add one (two's complement method) (-1010)
+    intflipped=int(str(flipped),2)                     # Back to int (-10)
+    intflipped = ((intflipped + (1 << 8)) % (1 << 8))  # Over to binary (246) <-- .uint
+    intflipped = '{0:08b}'.format(intflipped)          # Format to one byte (11110110) <-- same as -10.bin
+
+    checksum_bits = bitstring.BitArray(bin=intflipped)
+    return checksum_bits
+
+def get_special_preamble_bits(preamble_mid):
+    mid_bits = bitstring.BitArray(bytes=preamble_mid)
+    return mid_bits
+
+def get_special_payload_bits(payload):
+    payload_bits = bitstring.BitArray()
+
+    for b_int in bytes(payload):
+        b_bytes = bytes([b_int])
+        b_bits = bitstring.BitArray(bytes=b_bytes)
+        b_bits.reverse()
+
+        payload_bits.append(bitstring.ConstBitArray(bin='0')) # start bit
+        payload_bits.append(b_bits) # bit-reversed byte
+        payload_bits.append(bitstring.ConstBitArray(bin='1')) # stop bit
+
+    checksum_bits = get_checksum_bits(payload)
+    checksum_bits.reverse()
+
+    payload_bits.append(bitstring.ConstBitArray(bin='0'))
+    payload_bits.append(checksum_bits)
+    payload_bits.append(bitstring.ConstBitArray(bin='1'))
+
+    payload_bits.reverse()
+
+    return payload_bits
 
 class PRU_read_thread(threading.Thread):
     def __init__(self, stopped, socket, ddr_mem):
@@ -58,7 +112,7 @@ class PRU_read_thread(threading.Thread):
         self.ddr_mem = ddr_mem
 
         self.struct_start = DDR_START + SHARED_RECEIVE_BUF_OFFSET
-        self.frames_base = self.struct_start + RING_BUFFER_FRAMES_OFFSET
+        self.frames_base = self.struct_start + RX_RING_BUFFER_FRAMES_OFFSET
         self.frames_ptr = self.frames_base
 
         self.calls = 0
@@ -71,7 +125,7 @@ class PRU_read_thread(threading.Thread):
 
     def join(self, timeout=None):
         super(PRU_read_thread, self).join(timeout)
-        data = self.ddr_mem[DDR_START:DDR_START + SHARED_RECEIVE_BUF_LEN]
+        data = self.ddr_mem[DDR_START:DDR_START + SHARED_RECEIVE_BUF_SIZE]
         msg = map(lambda x: "{:02x}".format(ord(x)), data)
         for i in range(8, len(msg), SHARED_RECEIVE_FRAME_LEN + 1):
             print(",".join(msg[i:i + SHARED_RECEIVE_FRAME_LEN + 1]))
@@ -84,21 +138,25 @@ class PRU_read_thread(threading.Thread):
             self.calls += 1
             (produce, consume) = \
                 struct.unpack("LL", self.ddr_mem[DDR_START:DDR_START +
-                                                 RING_BUFFER_FRAMES_OFFSET])
+                                                 RX_RING_BUFFER_FRAMES_OFFSET])
             while consume != produce:
                 length = struct.unpack("B", self.ddr_mem[self.frames_ptr])[0]
                 frame = \
                     struct.unpack("B"*length,
                                   self.ddr_mem[self.frames_ptr+1:
                                                self.frames_ptr+1+length])
+
+                #TODO remote debug prints
+                sys.stderr.write('rx ' + str(frame) + '\n')
                 self.socket.sendto(''.join(map(chr, frame)),
                                    ('localhost', UDP_PORTS[1]))
+
                 consume = (consume + 1) % SHARED_RECEIVE_CIRC_BUF_SIZE
                 self.frames_ptr = self.frames_base + \
                     (consume * (SHARED_RECEIVE_FRAME_LEN + 1))
             if old_consume != consume:
-                self.ddr_mem[DDR_START + RING_BUFFER_CONSUME_OFFSET:
-                             DDR_START + RING_BUFFER_FRAMES_OFFSET] = \
+                self.ddr_mem[DDR_START + RX_RING_BUFFER_CONSUME_OFFSET:
+                             DDR_START + RX_RING_BUFFER_FRAMES_OFFSET] = \
                              struct.pack('L', consume)
                 old_consume = consume
 
@@ -109,7 +167,7 @@ class PRU_write_thread(threading.Thread):
         self.ddr_mem = ddr_mem
 
         self.struct_start = DDR_START + SHARED_SEND_BUF_OFFSET
-        self.frames_base = self.struct_start + RING_BUFFER_FRAMES_OFFSET
+        self.frames_base = self.struct_start + TX_RING_BUFFER_FRAMES_OFFSET
         self.frames_ptr = self.frames_base
 
         self.socket = socket
@@ -133,7 +191,10 @@ class PRU_write_thread(threading.Thread):
                 struct.unpack('LL',
                               self.ddr_mem[self.struct_start:
                                            self.struct_start +
-                                           RING_BUFFER_FRAMES_OFFSET])
+                                           TX_RING_BUFFER_FRAMES_OFFSET])
+
+            #TODO remove debug prints
+            sys.stderr.write("tx\n")
             if (produce + 1) % SHARED_SEND_CIRC_BUF_SIZE == consume:
                 sys.stderr.write("buffer full\n")
                 # the buffer is full so drop the frame
@@ -141,17 +202,40 @@ class PRU_write_thread(threading.Thread):
             if len(frame) > SHARED_SEND_FRAME_LEN:
                 frame = frame[:SHARED_SEND_FRAME_LEN]
 
-            len_byte = struct.pack('B', len(frame))
-            self.ddr_mem[self.frames_ptr] = len_byte
-            frame_offset = self.frames_ptr + 1
-            self.ddr_mem[frame_offset:frame_offset + len(frame)] = \
-                frame
+            preamble_byte = get_special_preamble_bits(frame[0]).tobytes()[0]
+            p = get_special_payload_bits(frame)
+            len_byte = struct.pack('B', p.len)
+            payload_bytes = p.tobytes()
+
+            self.ddr_mem[self.frames_ptr + TX_FRAME_BIT_LEN_OFFSET] = len_byte
+            self.ddr_mem[self.frames_ptr + TX_FRAME_PREAMBLE_OFFSET] = preamble_byte
+            frame_offset = self.frames_ptr + TX_FRAME_PAYLOAD_OFFSET
+            self.ddr_mem[frame_offset:frame_offset + len(payload_bytes)] = \
+                payload_bytes
             produce = (produce + 1) % SHARED_SEND_CIRC_BUF_SIZE
             self.frames_ptr = \
                 self.frames_base + (produce * (SHARED_SEND_FRAME_LEN + 1))
             self.ddr_mem[self.struct_start:self.struct_start +
-                         RING_BUFFER_CONSUME_OFFSET] = \
+                         TX_RING_BUFFER_CONSUME_OFFSET] = \
                 struct.pack('L', produce)
+
+class PRU_pump(threading.Thread):
+    def __init__(self, stopped, socket):
+        super(PRU_pump, self).__init__()
+        self.socket = socket
+
+        self.stopped = stopped
+
+    def kill_me(self):
+        self.stopped.set()
+
+    def join(self, timeout=None):
+        super(PRU_pump, self).join(timeout)
+
+    def run(self):
+        while not self.stopped.is_set():
+            time.sleep(2.0)
+            self.socket.sendto(b'\x0a\x00', ('localhost', UDP_PORTS[0]))
 
 
 pypruss.modprobe()
@@ -182,19 +266,25 @@ pru_send_thread = PRU_write_thread(stopped, sock, shared_mem)
 pru_stop_thread.start()
 pru_send_thread.start()
 
+pru_pump_thread = PRU_pump(stopped, sock)
+pru_pump_thread.start()
+
 pypruss.exec_program(TARGET_PRU_NO, TARGET_PRU_FW)
 
 
 def signal_handler(signal, frame):
     pru_stop_thread.kill_me()
     pru_send_thread.kill_me()
+    pru_pump_thread.kill_me()
     pru_stop_thread.join()
     pru_send_thread.join()
+    pru_pump_thread.join()
 
 
 signal.signal(signal.SIGINT, signal_handler)
 
 pru_stop_thread.join()
 pru_send_thread.join()
+pru_pump_thread.join()
 
 pypruss.exit()
