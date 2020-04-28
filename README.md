@@ -10,7 +10,12 @@ All sources here -- with the exception of `src/arm/BB-TRUCKCAPE-00A0.dts` -- are
 
 ## Installing
 
-TODO
+1. starting with the truckhacking.github.io image http://truckduck.sixvolts.org/images/truck-duck-25aug2016.img.xz
+2. install TI PRU C compiler `ti_cgt_pru_2.1.1_armlinuxa8hf_busybox_installer.sh` from http://downloads.ti.com/codegen/esd/cgt_public_sw/PRU/2.1.1/ti_cgt_pru_2.1.1_armlinuxa8hf_busybox_installer.sh
+3. install SDK: both http://downloads.ti.com/sitara_linux/esd/AM335xSDK/exports/ti-sdk-am335x-evm-07.00.00.00-Linux-x86-Install.bin and http://software-dl.ti.com/sitara_linux/esd/PRU-SWPKG/01_00_00_00/exports/pru-addon-v1.0-Linux-x86-Install.bin on a 32-bit x86 capable system
+4. transfer the resulting install directories to the beaglebone
+5. get pru-support-package onto the beaglefone from git: `git clone https://git.ti.com/cgit/pru-software-support-package/pru-software-support-package/`
+6. set Makefile variables `PRU_CGT`, `TI_AM335X` and `PRU_SUPPORT` (via edits or via env) to point to above
 
 ## Features
 
