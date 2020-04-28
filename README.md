@@ -26,4 +26,13 @@ All sources here -- with the exception of `src/arm/BB-TRUCKCAPE-00A0.dts` -- are
   * known to occasionally lock-up / stop receiving
 
 * PLC write on Truck Duck expansion
-  * TODO
+  * requires an AC coupling circuit from P9.29 to the power lines of the target such that 100Khz and above is passed. Details TODO
+  * no arbitration implemented
+  * no frame detect implemented TODO
+  * minimal error handling
+  * known to loose sync while sending TODO
+  * known to be using the dumbest PWM method possible
+  * known to have timings out of spec TODO
+  
+* PLC read on Truck Duck expansion
+  * requires an ADC populated on an expansion board to the Truck Duck TODO
