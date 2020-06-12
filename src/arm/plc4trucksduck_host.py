@@ -22,7 +22,7 @@ import bitstring
 
 TARGET_PRU_FW = 'plc4trucksduck.bin'
 TARGET_PRU_NO = 0
-UDP_PORTS = (6970, 6972)
+UDP_PORTS = (6971, 6972)
 
 DDR_START = 0x10000000  # 256MiB
 DDR_VADDR = 0x4a300000
