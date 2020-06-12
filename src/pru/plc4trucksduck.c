@@ -20,6 +20,9 @@
 #define PRU_NO 0
 
 #define RX_FRAME_LEN 4
+/* must match the same in plc4trucksduck_host.py */
+compile_time_assert(RX_FRAME_LEN == 4, rx_frame_len_must_be_4);
+
 typedef struct  {
     uint8_t volatile length;
     uint8_t volatile payload[RX_FRAME_LEN];
@@ -36,8 +39,6 @@ typedef struct {
 /* must match the same in plc4trucksduck_host.py */
 compile_time_assert(TX_FRAME_LEN == 42, tx_frame_len_must_be_42);
 
-#define TX_FRAME_PREAMBLE_LEN 8
-
 typedef struct  {
     uint8_t volatile bit_length;
     uint8_t volatile preamble; /* all the bits, without prepended 00, 0 or appended 1*/
@@ -51,13 +52,6 @@ typedef struct {
     tx_frame_t volatile frames[TX_RING_BUFFER_LEN];
 } tx_ring_buffer_t;
 
-#define CHIRP_SLEEPS_LEN 52
-typedef struct {
-    uint8_t length;
-    uint16_t sleeps[CHIRP_SLEEPS_LEN];
-} chirp_sleeps_t;
-#define CHIRP_SLEEPS_SIZE sizeof(chirp_sleeps_t)
-
 #define RX_RING_BUFFER_CONSUME_OFFSET 4
 /* must match the same in plc4trucksduck_host.py */
 compile_time_assert(RX_RING_BUFFER_CONSUME_OFFSET ==
@@ -67,6 +61,10 @@ compile_time_assert(RX_RING_BUFFER_CONSUME_OFFSET ==
 /* must match the same in plc4trucksduck_host.py */
 compile_time_assert(RX_RING_BUFFER_FRAMES_OFFSET ==
                     offsetof(rx_ring_buffer_t, frames), rx_ring_buf_frames_offset_must_be_8);
+
+#define RX_FRAME_SIZE 5
+/* must match the same in plc4trucksduck_host.py */
+compile_time_assert(RX_FRAME_SIZE == sizeof(rx_frame_t), rx_frame_size_must_be_5);
 
 #define TX_RING_BUFFER_CONSUME_OFFSET 4
 /* must match the same in plc4trucksduck_host.py */
@@ -93,6 +91,10 @@ compile_time_assert(TX_FRAME_PREAMBLE_OFFSET ==
 compile_time_assert(TX_FRAME_PAYLOAD_OFFSET ==
                     offsetof(tx_frame_t, payload), tx_frame_payload_offset_must_be_2);
 
+#define TX_FRAME_SIZE 44
+/* must match the same in plc4trucksduck_host.py */
+compile_time_assert(TX_FRAME_SIZE == sizeof(tx_frame_t), tx_frame_size_must_be_44);
+
 #define SHARED_RECEIVE_BUF_OFFSET 0
 /* must match the same in plc4trucksduck_host.py */
 compile_time_assert(SHARED_RECEIVE_BUF_OFFSET == 0, rx_buf_start_must_be_0);
@@ -109,7 +111,7 @@ compile_time_assert(SHARED_SEND_BUF_OFFSET == 28, tx_buf_start_must_be_28);
 #define SHARED_SEND_BUF_SIZE sizeof(tx_ring_buffer_t)
 compile_time_assert(SHARED_SEND_BUF_SIZE == 712, tx_buf_len_must_be_696);
 
-compile_time_assert(SHARED_RECEIVE_BUF_SIZE + SHARED_SEND_BUF_SIZE + CHIRP_SLEEPS_SIZE + 256 /*stack size*/ + 0 /*heap size*/ < 8192 /*PRU RAM size*/, bufs_must_be_less_than_ram);
+compile_time_assert(SHARED_RECEIVE_BUF_SIZE + SHARED_SEND_BUF_SIZE + 256 /*stack size*/ + 0 /*heap size*/ < 8192 /*PRU RAM size*/, bufs_must_be_less_than_ram);
 
 int __inline signal_frame_received();
 
@@ -186,219 +188,595 @@ void __inline hw_init() {
     return;
 }
 
-void __inline emit_pos_symbol() {
-    asm("   set r30, r30, 1");
-    __delay_cycles(484);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(467);
-    asm("   set r30, r30, 1");
-    __delay_cycles(452);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(437);
-    asm("   set r30, r30, 1");
-    __delay_cycles(426);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(414);
-    asm("   set r30, r30, 1");
-    __delay_cycles(403);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(393);
-    asm("   set r30, r30, 1");
-    __delay_cycles(384);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(375);
-    asm("   set r30, r30, 1");
-    __delay_cycles(368);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(360);
-    asm("   set r30, r30, 1");
-    __delay_cycles(353);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(346);
-    asm("   set r30, r30, 1");
-    __delay_cycles(340);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(334);
-    asm("   set r30, r30, 1");
-    __delay_cycles(328);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(323);
-    asm("   set r30, r30, 1");
-    __delay_cycles(318);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(312);
-    asm("   set r30, r30, 1");
-    __delay_cycles(309);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(303);
-    asm("   set r30, r30, 1");
-    __delay_cycles(300);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(295);
-    asm("   set r30, r30, 1");
-    __delay_cycles(291);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(288);
-    asm("   set r30, r30, 1");
-    __delay_cycles(284);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(280);
-    asm("   set r30, r30, 1");
-    __delay_cycles(277);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(274);
-    asm("   set r30, r30, 1");
-    __delay_cycles(270);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(268);
-    asm("   set r30, r30, 1");
-    __delay_cycles(264);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(262);
-    asm("   set r30, r30, 1");
-    __delay_cycles(259);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(256);
-    asm("   set r30, r30, 1");
-    __delay_cycles(254);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(249);
-    asm("   set r30, r30, 1");
-    __delay_cycles(325);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(542);
-    asm("   set r30, r30, 1");
-    __delay_cycles(592);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(582);
-    asm("   set r30, r30, 1");
-    __delay_cycles(573);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(563);
-    asm("   set r30, r30, 1");
-    __delay_cycles(555);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(546);
-    asm("   set r30, r30, 1");
-    __delay_cycles(538);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(531);
-    asm("   set r30, r30, 1");
-    __delay_cycles(523);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(517);
-    asm("   set r30, r30, 1");
-    __delay_cycles(509);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(504);
+void emit_pos_symbol() {
+    asm("        SUB      r2, r2, 8");
+    asm("        SBBO     &r0, r2, 0, 4");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 240 ; sleep 484 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 232 ; sleep 467 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 224 ; sleep 452 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 217 ; sleep 437 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 211 ; sleep 426 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 205 ; sleep 414 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 200 ; sleep 403 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 195 ; sleep 393 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 190 ; sleep 384 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 186 ; sleep 375 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 182 ; sleep 368 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 178 ; sleep 360 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 175 ; sleep 353 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 171 ; sleep 346 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 168 ; sleep 340 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 165 ; sleep 334 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 162 ; sleep 328 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 160 ; sleep 323 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 157 ; sleep 318 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 154 ; sleep 312 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 153 ; sleep 309 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 150 ; sleep 303 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 148 ; sleep 300 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 146 ; sleep 295 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 144 ; sleep 291 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 142 ; sleep 288 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 140 ; sleep 284 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 138 ; sleep 280 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 137 ; sleep 277 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 135 ; sleep 274 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 133 ; sleep 270 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 132 ; sleep 268 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 130 ; sleep 264 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 129 ; sleep 262 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 128 ; sleep 259 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 126 ; sleep 256 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 125 ; sleep 254 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 123 ; sleep 249 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 161 ; sleep 325 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 269 ; sleep 542 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 294 ; sleep 592 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 289 ; sleep 582 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 285 ; sleep 573 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 280 ; sleep 563 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 276 ; sleep 555 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 271 ; sleep 546 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 267 ; sleep 538 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 264 ; sleep 531 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 260 ; sleep 523 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 257 ; sleep 517 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 253 ; sleep 509 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        CLR      r30, r30, 1");
+    // caller is responsible for 504 cycle delay
+    asm("        LBBO     &r0, r2, 0, 4");
+    asm("        ADD      r2, r2, 8");
 }
 
-void __inline emit_neg_symbol() {
-    asm("   clr r30, r30, 1");
-    __delay_cycles(484);
-    asm("   set r30, r30, 1");
-    __delay_cycles(467);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(452);
-    asm("   set r30, r30, 1");
-    __delay_cycles(437);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(426);
-    asm("   set r30, r30, 1");
-    __delay_cycles(414);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(403);
-    asm("   set r30, r30, 1");
-    __delay_cycles(393);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(384);
-    asm("   set r30, r30, 1");
-    __delay_cycles(375);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(368);
-    asm("   set r30, r30, 1");
-    __delay_cycles(360);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(353);
-    asm("   set r30, r30, 1");
-    __delay_cycles(346);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(340);
-    asm("   set r30, r30, 1");
-    __delay_cycles(334);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(328);
-    asm("   set r30, r30, 1");
-    __delay_cycles(323);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(318);
-    asm("   set r30, r30, 1");
-    __delay_cycles(312);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(309);
-    asm("   set r30, r30, 1");
-    __delay_cycles(303);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(300);
-    asm("   set r30, r30, 1");
-    __delay_cycles(295);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(291);
-    asm("   set r30, r30, 1");
-    __delay_cycles(288);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(284);
-    asm("   set r30, r30, 1");
-    __delay_cycles(280);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(277);
-    asm("   set r30, r30, 1");
-    __delay_cycles(274);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(270);
-    asm("   set r30, r30, 1");
-    __delay_cycles(268);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(264);
-    asm("   set r30, r30, 1");
-    __delay_cycles(262);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(259);
-    asm("   set r30, r30, 1");
-    __delay_cycles(256);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(254);
-    asm("   set r30, r30, 1");
-    __delay_cycles(249);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(325);
-    asm("   set r30, r30, 1");
-    __delay_cycles(542);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(592);
-    asm("   set r30, r30, 1");
-    __delay_cycles(582);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(573);
-    asm("   set r30, r30, 1");
-    __delay_cycles(563);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(555);
-    asm("   set r30, r30, 1");
-    __delay_cycles(546);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(538);
-    asm("   set r30, r30, 1");
-    __delay_cycles(531);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(523);
-    asm("   set r30, r30, 1");
-    __delay_cycles(517);
-    asm("   clr r30, r30, 1");
-    __delay_cycles(509);
-    asm("   set r30, r30, 1");
-    __delay_cycles(504);
+#define EMIT_POS_SYMBOL_FINAL_CYCLES 504
+
+void emit_neg_symbol() {
+    asm("        SUB      r2, r2, 8");
+    asm("        SBBO     &r0, r2, 0, 4");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 240 ; sleep 484 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 232 ; sleep 467 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 224 ; sleep 452 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 217 ; sleep 437 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 211 ; sleep 426 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 205 ; sleep 414 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 200 ; sleep 403 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 195 ; sleep 393 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 190 ; sleep 384 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 186 ; sleep 375 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 182 ; sleep 368 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 178 ; sleep 360 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 175 ; sleep 353 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 171 ; sleep 346 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 168 ; sleep 340 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 165 ; sleep 334 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 162 ; sleep 328 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 160 ; sleep 323 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 157 ; sleep 318 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 154 ; sleep 312 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 153 ; sleep 309 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 150 ; sleep 303 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 148 ; sleep 300 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 146 ; sleep 295 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 144 ; sleep 291 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 142 ; sleep 288 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 140 ; sleep 284 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 138 ; sleep 280 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 137 ; sleep 277 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 135 ; sleep 274 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 133 ; sleep 270 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 132 ; sleep 268 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 130 ; sleep 264 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 129 ; sleep 262 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 128 ; sleep 259 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 126 ; sleep 256 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 125 ; sleep 254 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 123 ; sleep 249 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 161 ; sleep 325 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 269 ; sleep 542 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 294 ; sleep 592 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 289 ; sleep 582 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 285 ; sleep 573 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 280 ; sleep 563 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 276 ; sleep 555 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 271 ; sleep 546 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 267 ; sleep 538 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        XOR      r0, r0, r0 ; for even number of sleep cycles");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 264 ; sleep 531 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 260 ; sleep 523 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        SET      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 257 ; sleep 517 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        CLR      r30, r30, 1");
+    asm("        .newblock");
+    asm("        LDI32    r0, 253 ; sleep 509 cycles total");
+    asm("$1:     SUB      r0, r0, 1");
+    asm("        QBNE     $1, r0, 0");
+    asm("        SET      r30, r30, 1");
+    // caller is responsible for 504 cycle delay
+    asm("        LBBO     &r0, r2, 0, 4");
+    asm("        ADD      r2, r2, 8");
 }
+
+#define EMIT_NEG_SYMBOL_FINAL_CYCLES 504
 
 int __inline return_debug_info() {
     rx_ring_buffer_t *rx_buf = (rx_ring_buffer_t*) SHARED_RECEIVE_BUF_OFFSET;
@@ -425,73 +803,130 @@ int __inline return_debug_info() {
     return ret;
 }
 
+#define TX_FRAME_PREAMBLE_LEN 8
 #define PREAMBLE_EXTRA_CYCLES 2800 // 14us at 200MHz
 #define PREAMBLE_TOTAL_CYCLES 22800 // 114us at 200MHz
 
-void __inline emit_preamble_neg() {
-    emit_pos_symbol();
-    __delay_cycles(PREAMBLE_EXTRA_CYCLES);
-}
-
-void __inline emit_preamble_pos() {
-    asm("   clr r30, r30, 1");
-    __delay_cycles(PREAMBLE_TOTAL_CYCLES);
-}
-
-#define FAST_GPIO_BIT (1 << 1)
 #define BUS_ACCESS_IDLE_CYCLES (12 * PREAMBLE_TOTAL_CYCLES)
 
-//TODO tune the delays to account for the loop overhead
-int __inline hw_send_preamble(volatile tx_frame_t *msg) {
-    emit_preamble_neg();
-    emit_preamble_neg();
-    emit_preamble_neg();
+//NB: heavy use of __delay_cycles() in this function results in a large stack save/restore operation
+int hw_send_preamble(volatile tx_frame_t *msg) {
+    //emit negative preamble symbol
+    emit_pos_symbol();
+    __delay_cycles(EMIT_POS_SYMBOL_FINAL_CYCLES
+                    - 6 // overhead of emit_pos_symbol() call
+                    + PREAMBLE_EXTRA_CYCLES // silence time for preamble symbols only
+                    );
+    //emit negative preamble symbol
+    emit_pos_symbol();
+    __delay_cycles(EMIT_POS_SYMBOL_FINAL_CYCLES
+                    - 6 // overhead of emit_pos_symbol() call
+                    + PREAMBLE_EXTRA_CYCLES // silence time for preamble symbols only
+                    );
+    //emit negative preamble symbol
+    emit_pos_symbol();
+    __delay_cycles(EMIT_POS_SYMBOL_FINAL_CYCLES
+                    - 6 // overhead of emit_pos_symbol() call
+                    + PREAMBLE_EXTRA_CYCLES // silence time for preamble symbols only
+                    - 8 // overhead of loop initialization and test below
+                    );
+
     for(int i=0; i < TX_FRAME_PREAMBLE_LEN; ++i) {
         if(msg->preamble & (1 << i)) {
-            emit_preamble_pos();
+            //emit positive preamble symbol
+            asm("   clr r30, r30, 1");
+            __delay_cycles(PREAMBLE_TOTAL_CYCLES
+                            - 14 // loop and test overhead
+                            );
         } else {
-            emit_preamble_neg();
+            //emit negative preamble symbol
+            emit_pos_symbol();
+            __delay_cycles(EMIT_POS_SYMBOL_FINAL_CYCLES
+                            - 6 // overhead of emit_pos_symbol() call
+                            + PREAMBLE_EXTRA_CYCLES // silence time for preamble symbols only
+                            - 14 // loop and test overhead
+                            );
         }
     }
-    emit_preamble_pos();
 
+    __delay_cycles(8 // loop and test overhead not executed in last pass
+                    );
+    //emit positive preamble symbol
+    asm("   clr r30, r30, 1");
+    //caller is responsible for delay of PREAMBLE_TOTAL_CYCLES
     return 0;
 }
 
-//TODO tune the delays to account for the loop overhead
-int __inline hw_send_payload(volatile tx_frame_t *msg) {
-    for(int i=0; i < 5; ++i) {
+void hw_send_payload(volatile tx_frame_t *msg) {
+    register uint8_t bit_length = msg->bit_length;
+
+    for(uint8_t i=0; i < 4; ++i) {
         emit_pos_symbol();
+        __delay_cycles(EMIT_POS_SYMBOL_FINAL_CYCLES
+                        - 2 // loop overhead
+                        - 6 // overhead of next emit_pos_symbol() call
+                        );
     }
-    for(int i=0; i < msg->bit_length; ++i) {
-        if(msg->payload[ ((int) i / 8) ] & (i << (i % 8))) {
+    __delay_cycles(2 /*loop overhead not executed*/);
+    emit_pos_symbol();
+    __delay_cycles(EMIT_POS_SYMBOL_FINAL_CYCLES
+                    - 6 // overhead of emit_pos_symbol() call
+                    - 17 // loop and test overhead below
+                    );
+
+    for(uint8_t i=0; i < bit_length; ++i) {
+        if( msg->payload[ i / 8 ] & (1 << (7-(i % 8))) ) {
             emit_pos_symbol();
+            __delay_cycles(EMIT_POS_SYMBOL_FINAL_CYCLES
+                - 14 // loop and test overhead
+                - 6 // overhead of next emit_pos_symbol() call
+                );
         } else {
             emit_neg_symbol();
+            __delay_cycles(EMIT_POS_SYMBOL_FINAL_CYCLES
+                - 15 // loop and test overhead
+                - 6 // overhead of next emit_pos_symbol() call
+                );
         }
     }
-    for(int i=0; i < 7; ++i) {
-        emit_pos_symbol();
-    }
+    // loop exit above is only 2 cycles max, we will ignore
 
-    return 0;
+    emit_pos_symbol();
+    __delay_cycles(EMIT_POS_SYMBOL_FINAL_CYCLES
+                    - 1 // loop setup overhead
+                    - 6 // overhead of next emit_pos_symbol() call
+                    - 2 // loop exit overhead above adjust
+                    );
+    for(uint8_t i=0; i < 5; ++i) {
+        emit_pos_symbol();
+        __delay_cycles(EMIT_POS_SYMBOL_FINAL_CYCLES
+                        - 2 // loop overhead
+                        - 6 // overhead of next emit_pos_symbol() call
+                        );
+    }
+    emit_pos_symbol();
+    //caller is responsible for delay of EMIT_POS_SYMBOL_FINAL_CYCLES
 }
 
 int __inline hw_send_frame(volatile tx_frame_t *msg) {
-    // TODO: remove this fixed lamp on message
-    // msg->preamble = 0x0a;
-    // msg->bit_length = 30;
-    // msg->payload[0] = 0xfb;
-    // msg->payload[1] = 0x20;
-    // msg->payload[2] = 0x08;
-    // msg->payload[3] = 0x50;
+    tx_frame_t local_msg;
+    // copy to a local SRAM buffer to avoid non-deterministic and long waits on DDR access during send
+    memcpy((void *) &local_msg, (void *) msg, sizeof(tx_frame_t));
 
-    // TODO: we might need to mask interrupts in this area.
-    // TX gets unexpectedly long sometimes
     // send preamble
-    hw_send_preamble(msg);
+    hw_send_preamble(&local_msg);
+    __delay_cycles(PREAMBLE_TOTAL_CYCLES
+                - 2 // return from hw_send_preamble overhead
+                - 2 // hw_send_payload() call overhead below
+                - 1 // first loop setup overhead in hw_send_payload()
+                + 40 // custom fudge
+                );
+
     // send payload (and checksum)
-    hw_send_payload(msg);
+    hw_send_payload(&local_msg);
+    __delay_cycles(EMIT_POS_SYMBOL_FINAL_CYCLES
+                - 2 // return from hw_send_payload overhead
+                );
     // sleep for bus access idle time
     asm("   clr r30, r30, 1");
     __delay_cycles(BUS_ACCESS_IDLE_CYCLES);
