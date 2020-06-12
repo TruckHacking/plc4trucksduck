@@ -193,8 +193,6 @@ class PRU_write_thread(threading.Thread):
                                            self.struct_start +
                                            TX_RING_BUFFER_FRAMES_OFFSET])
 
-            #TODO remove debug prints
-            sys.stderr.write("tx\n")
             if (produce + 1) % SHARED_SEND_CIRC_BUF_SIZE == consume:
                 sys.stderr.write("buffer full\n")
                 # the buffer is full so drop the frame
@@ -218,6 +216,8 @@ class PRU_write_thread(threading.Thread):
             self.ddr_mem[self.struct_start:self.struct_start +
                          TX_RING_BUFFER_CONSUME_OFFSET] = \
                 struct.pack('L', produce)
+            #TODO remove debug prints
+            sys.stderr.write("tx preamble:%s payload:%s bit_length:%d\n" % (preamble_bits, payload_bits, ord(len_byte)))
 
 class PRU_pump(threading.Thread):
     def __init__(self, stopped, socket):
