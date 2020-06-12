@@ -41,6 +41,7 @@ SHARED_OFFSET = SHARED_ADDR - DDR_START
 SHARED_FILELEN = DDR_SIZE + DDR_START
 
 TX_FRAME_LEN = 42  # must match the same in plc4trucksduck.c
+TX_FRAME_SIZE = TX_FRAME_LEN + 2 # must match the same in plc4trucksduck.c
 TX_RING_BUFFER_LEN = 16  # must match the same in plc4trucksduck.c
 TX_RING_BUFFER_CONSUME_OFFSET = 4  # must match the same in plc4trucksduck.c
 TX_RING_BUFFER_FRAMES_OFFSET = 8  # must match the same in plc4trucksduck.c
@@ -49,11 +50,11 @@ TX_FRAME_PREAMBLE_OFFSET = 1  # must match the same in plc4trucksduck.c
 TX_FRAME_PAYLOAD_OFFSET = 2  # must match the same in plc4trucksduck.c
 
 RX_FRAME_LEN = 4  # must match the same in plc4trucksduck.c
+RX_FRAME_SIZE = RX_FRAME_LEN + 1 # must match the same in plc4trucksduck.c
 RX_RING_BUFFER_LEN = 4  # must match the same in plc4trucksduck.c
 RX_RING_BUFFER_CONSUME_OFFSET = 4  # must match the same in plc4trucksduck.c
 RX_RING_BUFFER_FRAMES_OFFSET = 8  # must match the same in plc4trucksduck.c
 
-SHARED_SEND_FRAME_LEN = TX_FRAME_LEN
 SHARED_RECEIVE_FRAME_LEN = RX_FRAME_LEN
 SHARED_SEND_CIRC_BUF_SIZE = TX_RING_BUFFER_LEN
 SHARED_RECEIVE_CIRC_BUF_SIZE = RX_RING_BUFFER_LEN
@@ -87,8 +88,7 @@ def get_special_payload_bits(payload):
     payload_bits = bitstring.BitArray()
 
     for b_int in bytes(payload):
-        b_bytes = bytes([b_int])
-        b_bits = bitstring.BitArray(bytes=b_bytes)
+        b_bits = bitstring.BitArray(bytes=b_int)
         b_bits.reverse()
 
         payload_bits.append(bitstring.ConstBitArray(bin='0')) # start bit
@@ -102,7 +102,7 @@ def get_special_payload_bits(payload):
     payload_bits.append(checksum_bits)
     payload_bits.append(bitstring.ConstBitArray(bin='1'))
 
-    payload_bits.reverse()
+    #payload_bits.reverse()
 
     return payload_bits
 
@@ -127,8 +127,8 @@ class PRU_read_thread(threading.Thread):
         super(PRU_read_thread, self).join(timeout)
         data = self.ddr_mem[DDR_START:DDR_START + SHARED_RECEIVE_BUF_SIZE]
         msg = map(lambda x: "{:02x}".format(ord(x)), data)
-        for i in range(8, len(msg), SHARED_RECEIVE_FRAME_LEN + 1):
-            print(",".join(msg[i:i + SHARED_RECEIVE_FRAME_LEN + 1]))
+        for i in range(8, len(msg), RX_FRAME_SIZE):
+            print(",".join(msg[i:i + RX_FRAME_SIZE]))
 
     def run(self):
         old_consume = 0
@@ -153,7 +153,7 @@ class PRU_read_thread(threading.Thread):
 
                 consume = (consume + 1) % SHARED_RECEIVE_CIRC_BUF_SIZE
                 self.frames_ptr = self.frames_base + \
-                    (consume * (SHARED_RECEIVE_FRAME_LEN + 1))
+                    (consume * RX_FRAME_SIZE)
             if old_consume != consume:
                 self.ddr_mem[DDR_START + RX_RING_BUFFER_CONSUME_OFFSET:
                              DDR_START + RX_RING_BUFFER_FRAMES_OFFSET] = \
@@ -197,22 +197,24 @@ class PRU_write_thread(threading.Thread):
                 sys.stderr.write("buffer full\n")
                 # the buffer is full so drop the frame
                 continue
-            if len(frame) > SHARED_SEND_FRAME_LEN:
-                frame = frame[:SHARED_SEND_FRAME_LEN]
+            if len(frame) > TX_FRAME_LEN:
+                frame = frame[:TX_FRAME_LEN]
 
-            preamble_byte = get_special_preamble_bits(frame[0]).tobytes()[0]
-            p = get_special_payload_bits(frame)
-            len_byte = struct.pack('B', p.len)
-            payload_bytes = p.tobytes()
+            preamble_bits = get_special_preamble_bits(frame[0])
+            preamble_byte = preamble_bits.tobytes()[0]
+            payload_bits = get_special_payload_bits(frame)
+            payload_bytes = payload_bits.tobytes()
 
+            len_byte = struct.pack('B', payload_bits.len)
             self.ddr_mem[self.frames_ptr + TX_FRAME_BIT_LEN_OFFSET] = len_byte
             self.ddr_mem[self.frames_ptr + TX_FRAME_PREAMBLE_OFFSET] = preamble_byte
             frame_offset = self.frames_ptr + TX_FRAME_PAYLOAD_OFFSET
             self.ddr_mem[frame_offset:frame_offset + len(payload_bytes)] = \
                 payload_bytes
+
             produce = (produce + 1) % SHARED_SEND_CIRC_BUF_SIZE
             self.frames_ptr = \
-                self.frames_base + (produce * (SHARED_SEND_FRAME_LEN + 1))
+                self.frames_base + (produce * TX_FRAME_SIZE)
             self.ddr_mem[self.struct_start:self.struct_start +
                          TX_RING_BUFFER_CONSUME_OFFSET] = \
                 struct.pack('L', produce)
@@ -235,7 +237,7 @@ class PRU_pump(threading.Thread):
     def run(self):
         while not self.stopped.is_set():
             time.sleep(2.0)
-            self.socket.sendto(b'\x0a\x00', ('localhost', UDP_PORTS[0]))
+            self.socket.sendto(b'\xaa', ('localhost', UDP_PORTS[0]))
 
 
 pypruss.modprobe()
