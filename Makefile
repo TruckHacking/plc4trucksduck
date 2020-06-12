@@ -60,7 +60,7 @@ $(PRU_BUILD_DIR):
 	mkdir -p $(PRU_BUILD_DIR)
 
 $(PRU_GEN_DIR)/%.fw : $(PRU_SRC_DIR)/%.c | $(PRU_GEN_DIR)
-	$(PRU_CGT)/usr/bin/clpru $(CFLAGS) $(INC) $< --run_linker $(LFLAGS) $(LIBS) --library=$(PRU_SUPPORT)/examples/am335x/PRU_PRUtoARM_Interrupt/AM335x_PRU.cmd --output_file=$@ -m$(patsubst %.fw,%.map,$@)
+	$(PRU_CGT)/usr/bin/clpru $(CFLAGS) $(INC) $^ --run_linker $(LFLAGS) $(LIBS) --library=$(PRU_SUPPORT)/examples/am335x/PRU_PRUtoARM_Interrupt/AM335x_PRU.cmd --output_file=$@ -m$(patsubst %.fw,%.map,$@)
 
 $(PRU_BUILD_DIR)/%.bin $(PRU_GEN_DIR)/%_data.bin : $(PRU_SRC_DIR)/%.cmd $(PRU_GEN_DIR)/%.fw | $(PRU_BUILD_DIR) $(PRU_GEN_DIR)
 	$(PRU_CGT)/usr/bin/hexpru $^
