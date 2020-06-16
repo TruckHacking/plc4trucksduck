@@ -101,9 +101,6 @@ def get_special_payload_bits(payload):
     payload_bits.append(bitstring.ConstBitArray(bin='0'))
     payload_bits.append(checksum_bits)
     payload_bits.append(bitstring.ConstBitArray(bin='1'))
-
-    #payload_bits.reverse()
-
     return payload_bits
 
 class PRU_read_thread(threading.Thread):
