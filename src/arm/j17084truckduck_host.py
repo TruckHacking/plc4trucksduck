@@ -39,6 +39,7 @@ SHARED_OFFSET = SHARED_ADDR - DDR_START
 SHARED_FILELEN = DDR_SIZE + DDR_START
 
 FRAME_LEN = 42  # must match the same in j17084truckduck.c
+FRAME_SIZE = FRAME_LEN + 1  # must match the same in j17084truckduck.c
 RING_BUFFER_LEN = 16  # must match the same in j17084truckduck.c
 RING_BUFFER_CONSUME_OFFSET = 4  # must match the same in j17084truckduck.c
 RING_BUFFER_FRAMES_OFFSET = 8  # must match the same in j17084truckduck.c
@@ -73,8 +74,8 @@ class PRU_read_thread(threading.Thread):
         super(PRU_read_thread, self).join(timeout)
         data = self.ddr_mem[DDR_START:DDR_START + SHARED_RECEIVE_BUF_LEN]
         msg = map(lambda x: "{:02x}".format(ord(x)), data)
-        for i in range(8, len(msg), SHARED_RECEIVE_FRAME_LEN + 1):
-            print(",".join(msg[i:i + SHARED_RECEIVE_FRAME_LEN + 1]))
+        for i in range(8, len(msg), FRAME_SIZE):
+            print(",".join(msg[i:i + FRAME_SIZE]))
 
     def run(self):
         old_consume = 0
@@ -95,7 +96,7 @@ class PRU_read_thread(threading.Thread):
                                    ('localhost', UDP_PORTS[1]))
                 consume = (consume + 1) % SHARED_RECEIVE_CIRC_BUF_SIZE
                 self.frames_ptr = self.frames_base + \
-                    (consume * (SHARED_RECEIVE_FRAME_LEN + 1))
+                    (consume * FRAME_SIZE)
             if old_consume != consume:
                 self.ddr_mem[DDR_START + RING_BUFFER_CONSUME_OFFSET:
                              DDR_START + RING_BUFFER_FRAMES_OFFSET] = \
@@ -148,7 +149,7 @@ class PRU_write_thread(threading.Thread):
                 frame
             produce = (produce + 1) % SHARED_SEND_CIRC_BUF_SIZE
             self.frames_ptr = \
-                self.frames_base + (produce * (SHARED_SEND_FRAME_LEN + 1))
+                self.frames_base + (produce * FRAME_SIZE)
             self.ddr_mem[self.struct_start:self.struct_start +
                          RING_BUFFER_CONSUME_OFFSET] = \
                 struct.pack('L', produce)

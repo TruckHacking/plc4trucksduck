@@ -42,6 +42,10 @@ compile_time_assert(RING_BUFFER_CONSUME_OFFSET ==
 compile_time_assert(RING_BUFFER_FRAMES_OFFSET ==
                     offsetof(ring_buffer_t, frames), ring_buf_frames_offset_must_be_8);
 
+#define FRAME_SIZE 43
+/* must match the same in j17084truckduck_host.py */
+compile_time_assert(FRAME_SIZE == sizeof(frame_t), frame_size_must_be_43);
+
 #define SHARED_RECEIVE_BUF_OFFSET 0
 /* must match the same in j17084truckduck_host.py */
 compile_time_assert(SHARED_RECEIVE_BUF_OFFSET == 0, rx_buf_start_must_be_0);
@@ -55,6 +59,8 @@ compile_time_assert(SHARED_SEND_BUF_OFFSET == 704, tx_buf_start_must_be_704);
 /* must match the same in j17084truckduck_host.py */
 #define SHARED_SEND_BUF_LEN sizeof(ring_buffer_t)
 compile_time_assert(SHARED_SEND_BUF_LEN == 696, tx_buf_len_must_be_696);
+
+compile_time_assert(SHARED_RECEIVE_BUF_LEN + SHARED_SEND_BUF_LEN + 256 /*stack size*/ + 0 /*heap size*/ < 8192 /*PRU RAM size*/, bufs_must_be_less_than_ram);
 
 int __inline signal_frame_received();
 
