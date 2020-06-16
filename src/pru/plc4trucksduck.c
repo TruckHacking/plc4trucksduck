@@ -853,7 +853,7 @@ int hw_send_preamble(volatile tx_frame_t *msg) {
 }
 
 void hw_send_payload(volatile tx_frame_t *msg) {
-    register uint8_t bit_length = msg->bit_length;
+    register uint16_t bit_length = msg->bit_length;
 
     for(uint8_t i=0; i < 4; ++i) {
         emit_pos_symbol();
@@ -869,7 +869,7 @@ void hw_send_payload(volatile tx_frame_t *msg) {
                     - 17 // loop and test overhead below
                     );
 
-    for(uint8_t i=0; i < bit_length; ++i) {
+    for(uint16_t i=0; i < bit_length; ++i) {
         if( msg->payload[ i / 8 ] & (1 << (7-(i % 8))) ) {
             emit_pos_symbol();
             __delay_cycles(EMIT_POS_SYMBOL_FINAL_CYCLES
