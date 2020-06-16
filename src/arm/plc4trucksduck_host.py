@@ -237,7 +237,7 @@ class PRU_pump(threading.Thread):
     def run(self):
         while not self.stopped.is_set():
             time.sleep(2.0)
-            self.socket.sendto(b'\xaa', ('localhost', UDP_PORTS[0]))
+            self.socket.sendto(b'\x0a\x00', ('localhost', UDP_PORTS[0]))
 
 
 pypruss.modprobe()
