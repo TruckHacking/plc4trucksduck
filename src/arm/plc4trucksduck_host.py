@@ -40,28 +40,24 @@ SHARED_ADDR = DDR_VADDR + TARGET_PRU_PRE_SIZE
 SHARED_OFFSET = SHARED_ADDR - DDR_START
 SHARED_FILELEN = DDR_SIZE + DDR_START
 
-TX_FRAME_LEN = 42  # must match the same in plc4trucksduck.c
-TX_FRAME_SIZE = TX_FRAME_LEN + 2 # must match the same in plc4trucksduck.c
+RX_PAYLOAD_LEN = 4  # must match the same in plc4trucksduck.c
+RX_RING_BUFFER_LEN = 4  # must match the same in plc4trucksduck.c
+RX_FRAME_SIZE = 5 # must match the same in plc4trucksduck.c
+RX_RING_BUFFER_CONSUME_OFFSET = 4  # must match the same in plc4trucksduck.c
+RX_RING_BUFFER_FRAMES_OFFSET = 8  # must match the same in plc4trucksduck.c
+
+TX_PAYLOAD_LEN = 42  # must match the same in plc4trucksduck.c
 TX_RING_BUFFER_LEN = 16  # must match the same in plc4trucksduck.c
+TX_FRAME_SIZE = 44 # must match the same in plc4trucksduck.c
 TX_RING_BUFFER_CONSUME_OFFSET = 4  # must match the same in plc4trucksduck.c
 TX_RING_BUFFER_FRAMES_OFFSET = 8  # must match the same in plc4trucksduck.c
 TX_FRAME_BIT_LEN_OFFSET = 0  # must match the same in plc4trucksduck.c
 TX_FRAME_PREAMBLE_OFFSET = 1  # must match the same in plc4trucksduck.c
 TX_FRAME_PAYLOAD_OFFSET = 2  # must match the same in plc4trucksduck.c
 
-RX_FRAME_LEN = 4  # must match the same in plc4trucksduck.c
-RX_FRAME_SIZE = RX_FRAME_LEN + 1 # must match the same in plc4trucksduck.c
-RX_RING_BUFFER_LEN = 4  # must match the same in plc4trucksduck.c
-RX_RING_BUFFER_CONSUME_OFFSET = 4  # must match the same in plc4trucksduck.c
-RX_RING_BUFFER_FRAMES_OFFSET = 8  # must match the same in plc4trucksduck.c
-
-SHARED_RECEIVE_FRAME_LEN = RX_FRAME_LEN
-SHARED_SEND_CIRC_BUF_SIZE = TX_RING_BUFFER_LEN
-SHARED_RECEIVE_CIRC_BUF_SIZE = RX_RING_BUFFER_LEN
-
-SHARED_RECEIVE_BUF_OFFSET = 0  # must match the same in plc4trucksduck.c
-SHARED_RECEIVE_BUF_SIZE = 28  # must match the same in plc4trucksduck.c
-SHARED_SEND_BUF_OFFSET = 28  # must match the same in plc4trucksduck.c
+RX_RING_BUFFER_VADDR_OFFSET = 0  # must match the same in plc4trucksduck.c
+RX_RING_BUFFER_SIZE = 28  # must match the same in plc4trucksduck.c
+TX_RING_BUFFER_VADDR_OFFSET = 28  # must match the same in plc4trucksduck.c
 
 def get_checksum_bits(payload):
     msg = str(bitstring.ConstBitArray(bytes=payload).bin)
@@ -108,7 +104,7 @@ class PRU_read_thread(threading.Thread):
         super(PRU_read_thread, self).__init__()
         self.ddr_mem = ddr_mem
 
-        self.struct_start = DDR_START + SHARED_RECEIVE_BUF_OFFSET
+        self.struct_start = DDR_START + RX_RING_BUFFER_VADDR_OFFSET
         self.frames_base = self.struct_start + RX_RING_BUFFER_FRAMES_OFFSET
         self.frames_ptr = self.frames_base
 
@@ -122,7 +118,7 @@ class PRU_read_thread(threading.Thread):
 
     def join(self, timeout=None):
         super(PRU_read_thread, self).join(timeout)
-        data = self.ddr_mem[DDR_START:DDR_START + SHARED_RECEIVE_BUF_SIZE]
+        data = self.ddr_mem[DDR_START:DDR_START + RX_RING_BUFFER_SIZE]
         msg = map(lambda x: "{:02x}".format(ord(x)), data)
         for i in range(8, len(msg), RX_FRAME_SIZE):
             print(",".join(msg[i:i + RX_FRAME_SIZE]))
@@ -148,7 +144,7 @@ class PRU_read_thread(threading.Thread):
                 self.socket.sendto(''.join(map(chr, frame)),
                                    ('localhost', UDP_PORTS[1]))
 
-                consume = (consume + 1) % SHARED_RECEIVE_CIRC_BUF_SIZE
+                consume = (consume + 1) % RX_RING_BUFFER_LEN
                 self.frames_ptr = self.frames_base + \
                     (consume * RX_FRAME_SIZE)
             if old_consume != consume:
@@ -163,7 +159,7 @@ class PRU_write_thread(threading.Thread):
         super(PRU_write_thread, self).__init__()
         self.ddr_mem = ddr_mem
 
-        self.struct_start = DDR_START + SHARED_SEND_BUF_OFFSET
+        self.struct_start = DDR_START + TX_RING_BUFFER_VADDR_OFFSET
         self.frames_base = self.struct_start + TX_RING_BUFFER_FRAMES_OFFSET
         self.frames_ptr = self.frames_base
 
@@ -190,7 +186,7 @@ class PRU_write_thread(threading.Thread):
                                            self.struct_start +
                                            TX_RING_BUFFER_FRAMES_OFFSET])
 
-            while (produce + 1) % SHARED_SEND_CIRC_BUF_SIZE == consume:
+            while (produce + 1) % TX_RING_BUFFER_LEN == consume:
                 sys.stderr.write("buffer full, waiting\n")
                 time.sleep(0.003)
                 (produce, consume) = \
@@ -198,8 +194,8 @@ class PRU_write_thread(threading.Thread):
                                   self.ddr_mem[self.struct_start:
                                                self.struct_start +
                                                TX_RING_BUFFER_FRAMES_OFFSET])
-            if len(frame) > TX_FRAME_LEN:
-                frame = frame[:TX_FRAME_LEN]
+            if len(frame) > TX_PAYLOAD_LEN:
+                frame = frame[:TX_PAYLOAD_LEN]
 
             preamble_bits = get_special_preamble_bits(frame[0])
             preamble_byte = preamble_bits.tobytes()[0]
@@ -213,7 +209,7 @@ class PRU_write_thread(threading.Thread):
             self.ddr_mem[frame_offset:frame_offset + len(payload_bytes)] = \
                 payload_bytes
 
-            produce = (produce + 1) % SHARED_SEND_CIRC_BUF_SIZE
+            produce = (produce + 1) % TX_RING_BUFFER_LEN
             self.frames_ptr = \
                 self.frames_base + (produce * TX_FRAME_SIZE)
             self.ddr_mem[self.struct_start:self.struct_start +
