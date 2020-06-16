@@ -19,48 +19,62 @@
 
 #define PRU_NO 1
 
-#define FRAME_LEN 42
+#define PAYLOAD_LEN 255
+/* must match the same in j17084truckduck_host.py */
+compile_time_assert(PAYLOAD_LEN == 255, frame_size_must_be_42);
 typedef struct  {
     uint8_t volatile length;
-    uint8_t volatile payload[FRAME_LEN];
+    uint8_t volatile payload[PAYLOAD_LEN];
 } frame_t;
 
-#define RING_BUFFER_LEN 16
+#define FRAME_SIZE 256
+/* must match the same in j17084truckduck_host.py */
+compile_time_assert(FRAME_SIZE == sizeof(frame_t), frame_size_must_be_43);
+
+#define RX_RING_BUFFER_LEN 16
 typedef struct {
     uint32_t volatile produce;
     uint32_t volatile consume;
-    frame_t volatile frames[RING_BUFFER_LEN];
-} ring_buffer_t;
+    frame_t volatile frames[RX_RING_BUFFER_LEN];
+} rx_ring_buffer_t;
+
+#define TX_RING_BUFFER_LEN 4
+typedef struct {
+    uint32_t volatile produce;
+    uint32_t volatile consume;
+    frame_t volatile frames[TX_RING_BUFFER_LEN];
+} tx_ring_buffer_t;
 
 #define RING_BUFFER_CONSUME_OFFSET 4
 /* must match the same in j17084truckduck_host.py */
 compile_time_assert(RING_BUFFER_CONSUME_OFFSET ==
-                    offsetof(ring_buffer_t, consume), ring_buf_consume_offset_must_be_4);
+                    offsetof(rx_ring_buffer_t, consume), rx_ring_buf_consume_offset_must_be_4);
+compile_time_assert(RING_BUFFER_CONSUME_OFFSET ==
+                    offsetof(tx_ring_buffer_t, consume), tx_ring_buf_consume_offset_must_be_4);
 
 #define RING_BUFFER_FRAMES_OFFSET 8
 /* must match the same in j17084truckduck_host.py */
 compile_time_assert(RING_BUFFER_FRAMES_OFFSET ==
-                    offsetof(ring_buffer_t, frames), ring_buf_frames_offset_must_be_8);
+                    offsetof(rx_ring_buffer_t, frames), rx_ing_buf_frames_offset_must_be_8);
+compile_time_assert(RING_BUFFER_FRAMES_OFFSET ==
+                    offsetof(tx_ring_buffer_t, frames), tx_ing_buf_frames_offset_must_be_8);
 
-#define FRAME_SIZE 43
+#define RX_RING_BUFFER_VADDR_OFFSET 0
 /* must match the same in j17084truckduck_host.py */
-compile_time_assert(FRAME_SIZE == sizeof(frame_t), frame_size_must_be_43);
+compile_time_assert(RX_RING_BUFFER_VADDR_OFFSET == 0, rx_buf_start_must_be_0);
+#define RX_RING_BUFFER_SIZE sizeof(rx_ring_buffer_t)
+/* must match the same in j17084truckduck_host.py */
+compile_time_assert(RX_RING_BUFFER_SIZE == 4104 , rx_buf_len_must_be_696);
+#define TX_RING_BUFFER_VADDR_OFFSET 4104
+/* must match the same in j17084truckduck_host.py */
+compile_time_assert(TX_RING_BUFFER_VADDR_OFFSET == 4104, tx_buf_start_must_be_704);
 
-#define SHARED_RECEIVE_BUF_OFFSET 0
 /* must match the same in j17084truckduck_host.py */
-compile_time_assert(SHARED_RECEIVE_BUF_OFFSET == 0, rx_buf_start_must_be_0);
-#define SHARED_RECEIVE_BUF_LEN sizeof(ring_buffer_t)
-/* must match the same in j17084truckduck_host.py */
-compile_time_assert(SHARED_RECEIVE_BUF_LEN == 696 , rx_buf_len_must_be_696);
+#define TX_RING_BUFFER_SIZE sizeof(tx_ring_buffer_t)
+compile_time_assert(TX_RING_BUFFER_SIZE == 1032, tx_buf_len_must_be_696);
 
-#define SHARED_SEND_BUF_OFFSET 704
-/* must match the same in j17084truckduck_host.py */
-compile_time_assert(SHARED_SEND_BUF_OFFSET == 704, tx_buf_start_must_be_704);
-/* must match the same in j17084truckduck_host.py */
-#define SHARED_SEND_BUF_LEN sizeof(ring_buffer_t)
-compile_time_assert(SHARED_SEND_BUF_LEN == 696, tx_buf_len_must_be_696);
-
-compile_time_assert(SHARED_RECEIVE_BUF_LEN + SHARED_SEND_BUF_LEN + 256 /*stack size*/ + 0 /*heap size*/ < 8192 /*PRU RAM size*/, bufs_must_be_less_than_ram);
+/* check total size doesn't exceed available 8K */
+compile_time_assert(RX_RING_BUFFER_SIZE + TX_RING_BUFFER_SIZE + 256 /*stack size*/ + 0 /*heap size*/ < 8192 /*PRU RAM size*/, bufs_must_be_less_than_ram);
 
 int __inline signal_frame_received();
 
@@ -69,14 +83,14 @@ int __inline hw_is_bus_available();
 uint8_t __inline hw_wait_and_read_char();
 
 int __inline receive_frame() {
-    ring_buffer_t *rx_buf = (ring_buffer_t*) SHARED_RECEIVE_BUF_OFFSET;
+    rx_ring_buffer_t *rx_buf = (rx_ring_buffer_t*) RX_RING_BUFFER_VADDR_OFFSET;
     int ret = 0;
 
-    for (int i = 0; i < FRAME_LEN; ++i) {
+    for (int i = 0; i < PAYLOAD_LEN; ++i) {
         uint32_t tmp_produce = rx_buf->produce;
         uint32_t tmp_consume = rx_buf->consume;
 
-        if ((tmp_produce + 1) % RING_BUFFER_LEN == tmp_consume) {
+        if ((tmp_produce + 1) % RX_RING_BUFFER_LEN == tmp_consume) {
             hw_wait_for_bus();
             /* Buffer is full
              * TODO better error logging,
@@ -92,7 +106,7 @@ int __inline receive_frame() {
          * the received frames */
         if (hw_is_bus_available()) {
             rx_buf->frames[tmp_produce].length = i + 1;
-            rx_buf->produce = (tmp_produce + 1) % RING_BUFFER_LEN;
+            rx_buf->produce = (tmp_produce + 1) % RX_RING_BUFFER_LEN;
 
             signal_frame_received();
             break;
@@ -104,7 +118,7 @@ int __inline receive_frame() {
 
 /* returns non-zero if there is a pending frame to send */
 int __inline is_frame_to_send() {
-    ring_buffer_t *tx_buf = (ring_buffer_t*) SHARED_SEND_BUF_OFFSET;
+    tx_ring_buffer_t *tx_buf = (tx_ring_buffer_t*) TX_RING_BUFFER_VADDR_OFFSET;
 
     if (tx_buf->produce == tx_buf->consume) {
         return 0;
@@ -115,7 +129,7 @@ int __inline is_frame_to_send() {
 int __inline hw_send_frame(volatile frame_t *msg);
 
 int __inline send_next_frame() {
-    ring_buffer_t *tx_buf = (ring_buffer_t*) SHARED_SEND_BUF_OFFSET;
+    tx_ring_buffer_t *tx_buf = (tx_ring_buffer_t*) TX_RING_BUFFER_VADDR_OFFSET;
     int err = 0;
 
     if (!is_frame_to_send()) {
@@ -125,7 +139,7 @@ int __inline send_next_frame() {
     err = hw_send_frame(tx_buf->frames + tx_buf->consume);
 
     if (!err) {
-        tx_buf->consume = (tx_buf->consume + 1) % RING_BUFFER_LEN;
+        tx_buf->consume = (tx_buf->consume + 1) % TX_RING_BUFFER_LEN;
     }
 
     return err;
@@ -360,11 +374,11 @@ void __inline hw_wait_for_bus() {
 }
 
 void ringbuff_init() {
-    ring_buffer_t *rx_buf = (ring_buffer_t*) SHARED_RECEIVE_BUF_OFFSET;
-    ring_buffer_t *tx_buf = (ring_buffer_t*) SHARED_SEND_BUF_OFFSET;
+    rx_ring_buffer_t *rx_buf = (rx_ring_buffer_t*) RX_RING_BUFFER_VADDR_OFFSET;
+    tx_ring_buffer_t *tx_buf = (tx_ring_buffer_t*) TX_RING_BUFFER_VADDR_OFFSET;
 
-    memset((void *) rx_buf, 0, SHARED_RECEIVE_BUF_LEN);
-    memset((void *) tx_buf, 0, SHARED_SEND_BUF_LEN);
+    memset((void *) rx_buf, 0, RX_RING_BUFFER_SIZE);
+    memset((void *) tx_buf, 0, TX_RING_BUFFER_SIZE);
 
     return;
 }
