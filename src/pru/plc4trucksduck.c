@@ -106,7 +106,7 @@ compile_time_assert(TX_RING_BUFFER_VADDR_OFFSET == 28, tx_buf_start_must_be_28);
 compile_time_assert(TX_RING_BUFFER_SIZE == 712, tx_buf_len_must_be_712);
 
 /* check total size doesn't exceed available 8K */
-compile_time_assert(RX_RING_BUFFER_SIZE + TX_RING_BUFFER_SIZE + 256 /*stack size*/ + 0 /*heap size*/ < 8192 /*PRU RAM size*/, bufs_must_be_less_than_ram);
+compile_time_assert(RX_RING_BUFFER_SIZE + TX_RING_BUFFER_SIZE + 156 /*stack size*/ + 0 /*heap size*/ < 8192 /*PRU RAM size*/, bufs_must_be_less_than_ram);
 
 int __inline signal_frame_received();
 
