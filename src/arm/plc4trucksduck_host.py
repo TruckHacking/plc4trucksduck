@@ -193,10 +193,14 @@ class PRU_write_thread(threading.Thread):
                                            self.struct_start +
                                            TX_RING_BUFFER_FRAMES_OFFSET])
 
-            if (produce + 1) % SHARED_SEND_CIRC_BUF_SIZE == consume:
-                sys.stderr.write("buffer full\n")
-                # the buffer is full so drop the frame
-                continue
+            while (produce + 1) % SHARED_SEND_CIRC_BUF_SIZE == consume:
+                sys.stderr.write("buffer full, waiting\n")
+                time.sleep(0.003)
+                (produce, consume) = \
+                    struct.unpack('LL',
+                                  self.ddr_mem[self.struct_start:
+                                               self.struct_start +
+                                               TX_RING_BUFFER_FRAMES_OFFSET])
             if len(frame) > TX_FRAME_LEN:
                 frame = frame[:TX_FRAME_LEN]
 

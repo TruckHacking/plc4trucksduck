@@ -17,6 +17,7 @@ import socket
 import struct
 import sys
 import threading
+import time
 
 TARGET_PRU_FW = 'j17084truckduck.bin'
 TARGET_PRU_NO = 1
@@ -133,10 +134,14 @@ class PRU_write_thread(threading.Thread):
                               self.ddr_mem[self.struct_start:
                                            self.struct_start +
                                            RING_BUFFER_FRAMES_OFFSET])
-            if (produce + 1) % TX_RING_BUFFER_LEN == consume:
-                sys.stderr.write("buffer full\n")
-                # the buffer is full so drop the frame
-                continue
+            while (produce + 1) % TX_RING_BUFFER_LEN == consume:
+                sys.stderr.write("buffer full, waiting\n")
+                time.sleep(0.003)
+                (produce, consume) = \
+                    struct.unpack('LL',
+                                  self.ddr_mem[self.struct_start:
+                                               self.struct_start +
+                                               RING_BUFFER_FRAMES_OFFSET])
             if len(frame) > PAYLOAD_LEN:
                 # truncate at maximum payload length
                 frame = frame[:PAYLOAD_LEN]
