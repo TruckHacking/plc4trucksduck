@@ -20,19 +20,25 @@ All sources here -- with the exception of `src/arm/BB-TRUCKCAPE-00A0.dts` -- are
 ## Features
 
 * J1708 read and write on the Deutsch-9 and/or DB-15 J1708_LO and J1708_HI pins of the Truck Duck
-  * no arbitration implemented
+  * no arbitration implemented, only frame detect
   * no error handling or reporting
   * known to occasionally return extra bytes on J1708 frames received
   * known to occasionally lock-up / stop receiving
+  * can only send 42 byte payloads TODO
+  * drops send frames on TX buffer full TODO
+  * drop receive frames on RX buffer full TODO
 
 * PLC write on Truck Duck expansion
   * requires an AC coupling circuit from P9.29 to the power lines of the target such that 100Khz and above is passed. Details TODO
   * no arbitration implemented
   * no frame detect implemented TODO
   * minimal error handling
-  * known to loose sync while sending TODO
-  * known to be using the dumbest PWM method possible
-  * known to have timings out of spec TODO
-  
+  * known to be using the dumbest PWM method possible (but it works)
+  * can only send 42 byte payloads TODO
+  * drops send frames on TX buffer full TODO
+  * drop receive frames on RX buffer full TODO
+  * cannot send disting PLC preamble ID and J1708 payload MID TODO
+  * not confirmed to be able to be received by all trailer brake controllers TODO
+
 * PLC read on Truck Duck expansion
   * requires an ADC populated on an expansion board to the Truck Duck TODO
