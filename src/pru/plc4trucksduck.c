@@ -49,28 +49,28 @@ compile_time_assert(RX_RING_BUFFER_CONSUME_OFFSET ==
 compile_time_assert(RX_RING_BUFFER_FRAMES_OFFSET ==
                     offsetof(rx_ring_buffer_t, frames), rx_ring_buf_frames_offset_must_be_8);
 
-#define TX_PAYLOAD_LEN 42
+#define TX_PAYLOAD_LEN 321 // payload special bits size for 255 byte payload
 /* must match the same in plc4trucksduck_host.py */
-compile_time_assert(TX_PAYLOAD_LEN == 42, tx_frame_len_must_be_42);
+compile_time_assert(TX_PAYLOAD_LEN == 321, tx_frame_len_must_be_321);
 
 typedef struct  {
-    uint8_t volatile bit_length;
+    uint16_t volatile bit_length;
     uint8_t volatile preamble; /* all the bits, without prepended 00, 0 or appended 1*/
     uint8_t volatile payload[TX_PAYLOAD_LEN]; /* all the bits, including checksum, without 11111 prepended or 1111111 appended */
 } tx_frame_t;
 
-#define TX_RING_BUFFER_LEN 16
+#define TX_RING_BUFFER_LEN 4
 /* must match the same in plc4trucksduck_host.py */
-compile_time_assert(TX_RING_BUFFER_LEN == 16, tx_ring_buffer_len_must_be_4);
+compile_time_assert(TX_RING_BUFFER_LEN == 4, tx_ring_buffer_len_must_be_4);
 typedef struct {
     uint32_t volatile produce;
     uint32_t volatile consume;
     tx_frame_t volatile frames[TX_RING_BUFFER_LEN];
 } tx_ring_buffer_t;
 
-#define TX_FRAME_SIZE 44
+#define TX_FRAME_SIZE 324
 /* must match the same in plc4trucksduck_host.py */
-compile_time_assert(TX_FRAME_SIZE == sizeof(tx_frame_t), tx_frame_size_must_be_44);
+compile_time_assert(TX_FRAME_SIZE == sizeof(tx_frame_t), tx_frame_size_must_be_324);
 #define TX_RING_BUFFER_CONSUME_OFFSET 4
 /* must match the same in plc4trucksduck_host.py */
 compile_time_assert(TX_RING_BUFFER_CONSUME_OFFSET ==
@@ -83,14 +83,14 @@ compile_time_assert(TX_RING_BUFFER_FRAMES_OFFSET ==
 /* must match the same in plc4trucksduck_host.py */
 compile_time_assert(TX_FRAME_BIT_LEN_OFFSET ==
                     offsetof(tx_frame_t, bit_length), tx_frame_bitlen_offset_must_be_0);
-#define TX_FRAME_PREAMBLE_OFFSET 1
+#define TX_FRAME_PREAMBLE_OFFSET 2
 /* must match the same in plc4trucksduck_host.py */
 compile_time_assert(TX_FRAME_PREAMBLE_OFFSET ==
-                    offsetof(tx_frame_t, preamble), tx_frame_preamble_offset_must_be_1);
-#define TX_FRAME_PAYLOAD_OFFSET 2
+                    offsetof(tx_frame_t, preamble), tx_frame_preamble_offset_must_be_2);
+#define TX_FRAME_PAYLOAD_OFFSET 3
 /* must match the same in plc4trucksduck_host.py */
 compile_time_assert(TX_FRAME_PAYLOAD_OFFSET ==
-                    offsetof(tx_frame_t, payload), tx_frame_payload_offset_must_be_2);
+                    offsetof(tx_frame_t, payload), tx_frame_payload_offset_must_be_3);
 
 #define RX_RING_BUFFER_VADDR_OFFSET 0
 /* must match the same in plc4trucksduck_host.py */
@@ -103,10 +103,10 @@ compile_time_assert(RX_RING_BUFFER_SIZE == 28 , rx_buf_len_must_be_28);
 compile_time_assert(TX_RING_BUFFER_VADDR_OFFSET == 28, tx_buf_start_must_be_28);
 /* must match the same in plc4trucksduck_host.py */
 #define TX_RING_BUFFER_SIZE sizeof(tx_ring_buffer_t)
-compile_time_assert(TX_RING_BUFFER_SIZE == 712, tx_buf_len_must_be_712);
+compile_time_assert(TX_RING_BUFFER_SIZE == 1304, tx_buf_len_must_be_1304);
 
 /* check total size doesn't exceed available 8K */
-compile_time_assert(RX_RING_BUFFER_SIZE + TX_RING_BUFFER_SIZE + 156 /*stack size*/ + 0 /*heap size*/ < 8192 /*PRU RAM size*/, bufs_must_be_less_than_ram);
+compile_time_assert(RX_RING_BUFFER_SIZE + TX_RING_BUFFER_SIZE + 438 /*stack size*/ + 0 /*heap size*/ < 8192 /*PRU RAM size*/, bufs_must_be_less_than_ram);
 
 int __inline signal_frame_received();
 

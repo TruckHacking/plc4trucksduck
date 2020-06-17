@@ -46,18 +46,20 @@ RX_FRAME_SIZE = 5 # must match the same in plc4trucksduck.c
 RX_RING_BUFFER_CONSUME_OFFSET = 4  # must match the same in plc4trucksduck.c
 RX_RING_BUFFER_FRAMES_OFFSET = 8  # must match the same in plc4trucksduck.c
 
-TX_PAYLOAD_LEN = 42  # must match the same in plc4trucksduck.c
-TX_RING_BUFFER_LEN = 16  # must match the same in plc4trucksduck.c
-TX_FRAME_SIZE = 44 # must match the same in plc4trucksduck.c
+TX_PAYLOAD_LEN = 321  # must match the same in plc4trucksduck.c
+TX_RING_BUFFER_LEN = 4  # must match the same in plc4trucksduck.c
+TX_FRAME_SIZE = 324 # must match the same in plc4trucksduck.c
 TX_RING_BUFFER_CONSUME_OFFSET = 4  # must match the same in plc4trucksduck.c
 TX_RING_BUFFER_FRAMES_OFFSET = 8  # must match the same in plc4trucksduck.c
 TX_FRAME_BIT_LEN_OFFSET = 0  # must match the same in plc4trucksduck.c
-TX_FRAME_PREAMBLE_OFFSET = 1  # must match the same in plc4trucksduck.c
-TX_FRAME_PAYLOAD_OFFSET = 2  # must match the same in plc4trucksduck.c
+TX_FRAME_PREAMBLE_OFFSET = 2  # must match the same in plc4trucksduck.c
+TX_FRAME_PAYLOAD_OFFSET = 3  # must match the same in plc4trucksduck.c
 
 RX_RING_BUFFER_VADDR_OFFSET = 0  # must match the same in plc4trucksduck.c
 RX_RING_BUFFER_SIZE = 28  # must match the same in plc4trucksduck.c
 TX_RING_BUFFER_VADDR_OFFSET = 28  # must match the same in plc4trucksduck.c
+
+MAX_PAYLOAD_SIZE = 255  # corresponds to 321 special bits payload bytes above
 
 def get_checksum_bits(payload):
     msg = str(bitstring.ConstBitArray(bytes=payload).bin)
@@ -194,17 +196,20 @@ class PRU_write_thread(threading.Thread):
                                   self.ddr_mem[self.struct_start:
                                                self.struct_start +
                                                TX_RING_BUFFER_FRAMES_OFFSET])
-            if len(frame) > TX_PAYLOAD_LEN:
-                frame = frame[:TX_PAYLOAD_LEN]
+            if len(frame) > MAX_PAYLOAD_SIZE:
+                frame = frame[:MAX_PAYLOAD_SIZE]
 
             preamble_bits = get_special_preamble_bits(frame[0])
             preamble_byte = preamble_bits.tobytes()[0]
             payload_bits = get_special_payload_bits(frame)
             payload_bytes = payload_bits.tobytes()
 
-            len_byte = struct.pack('B', payload_bits.len)
-            self.ddr_mem[self.frames_ptr + TX_FRAME_BIT_LEN_OFFSET] = len_byte
-            self.ddr_mem[self.frames_ptr + TX_FRAME_PREAMBLE_OFFSET] = preamble_byte
+            bit_len_offset = self.frames_ptr + TX_FRAME_BIT_LEN_OFFSET
+            self.ddr_mem[bit_len_offset:bit_len_offset + 2] = \
+                struct.pack('H', payload_bits.len)
+            self.ddr_mem[self.frames_ptr + TX_FRAME_PREAMBLE_OFFSET] = \
+                preamble_byte
+
             frame_offset = self.frames_ptr + TX_FRAME_PAYLOAD_OFFSET
             self.ddr_mem[frame_offset:frame_offset + len(payload_bytes)] = \
                 payload_bytes
@@ -216,7 +221,7 @@ class PRU_write_thread(threading.Thread):
                          TX_RING_BUFFER_CONSUME_OFFSET] = \
                 struct.pack('L', produce)
             #TODO remove debug prints
-            sys.stderr.write("tx preamble:%s payload:%s bit_length:%d\n" % (preamble_bits, payload_bits, ord(len_byte)))
+            sys.stderr.write("tx preamble:%s payload:%s bit_length:%d\n" % (preamble_bits, payload_bits, payload_bits.len))
 
 class PRU_pump(threading.Thread):
     def __init__(self, stopped, socket):

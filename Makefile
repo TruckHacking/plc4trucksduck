@@ -29,7 +29,7 @@ PLC4TRUCKSDUCK_CMDFILE=$(PRU_SRC_DIR)/plc4trucksduck.cmd
 
 PRU_BINS=$(J17084TRUCKDUCK_BINS) $(PLC4TRUCKSDUCK_BINS)
 
-STACK_SIZE=$(shell expr 8 + 8 + 8 + 8 + 60 + 64)  # from inspection of plc4trucksduck.asm 8+8+8+8+0x3c + 64 slop
+STACK_SIZE=$(shell expr 8 + 8 + 8 + 8 + 342 + 64)  # from inspection of plc4trucksduck.asm 8+8+8+8+0xff+0x57 + 64 slop
 CFLAGS=--c99 --silicon_version=3 -o1 --keep_asm --asm_directory=$(PRU_GEN_DIR) --obj_directory=$(PRU_GEN_DIR) --pp_directory=$(PRU_GEN_DIR) -ss --symdebug:none --display_error_number --diag_remark=1119
 INC=-I$(TI_AM335X)/example-applications/pru/include -I$(PRU_CGT)/usr/share/ti/cgt-pru/include -I$(PRU_SUPPORT)/include -I$(PRU_SUPPORT)/include/am335x
 LFLAGS=--stack_size=$(STACK_SIZE)
