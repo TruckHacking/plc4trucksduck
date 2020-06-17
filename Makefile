@@ -77,10 +77,12 @@ install: $(DTB_OFILES)
 	echo manual > /etc/init/non_ecm.override
 	install -m 600 $(PARENT_DTB_OFILE) /lib/firmware/
 	install -m 600 $(THIS_DTB_OFILE) /lib/firmware/
-	# TODO: install a upstart conf for plc4trucksduck also
 	install -m 700 $(ARM_SRC_DIR)/j17084truckduck_host.py /usr/local/bin/
 	install -m 600 $(PRU_BUILD_DIR)/j17084truckduck.bin /lib/firmware
 	install -m 644 $(ARM_SRC_DIR)/j17084truckduck.conf /etc/init/
+	install -m 700 $(ARM_SRC_DIR)/plc4trucksduck_host.py /usr/local/bin/
+	install -m 600 $(PRU_BUILD_DIR)/plc4trucksduck.bin /lib/firmware
+	install -m 644 $(ARM_SRC_DIR)/plc4trucksduck.conf /etc/init/
 	@echo NOTE /// You must reboot before you can load $(THIS_DTB_OFILE) ///
 
 run:

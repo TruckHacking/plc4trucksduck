@@ -143,8 +143,6 @@ class PRU_read_thread(threading.Thread):
 
                 #TODO remote debug prints
                 sys.stderr.write('rx ' + str(frame) + '\n')
-                self.socket.sendto(''.join(map(chr, frame)),
-                                   ('localhost', UDP_PORTS[1]))
 
                 consume = (consume + 1) % RX_RING_BUFFER_LEN
                 self.frames_ptr = self.frames_base + \
@@ -223,25 +221,6 @@ class PRU_write_thread(threading.Thread):
             #TODO remove debug prints
             sys.stderr.write("tx preamble:%s payload:%s bit_length:%d\n" % (preamble_bits, payload_bits, payload_bits.len))
 
-class PRU_pump(threading.Thread):
-    def __init__(self, stopped, socket):
-        super(PRU_pump, self).__init__()
-        self.socket = socket
-
-        self.stopped = stopped
-
-    def kill_me(self):
-        self.stopped.set()
-
-    def join(self, timeout=None):
-        super(PRU_pump, self).join(timeout)
-
-    def run(self):
-        while not self.stopped.is_set():
-            time.sleep(2.0)
-            self.socket.sendto(b'\x0a\x00', ('localhost', UDP_PORTS[0]))
-
-
 pypruss.modprobe()
 
 sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
@@ -270,9 +249,6 @@ pru_send_thread = PRU_write_thread(stopped, sock, shared_mem)
 pru_stop_thread.start()
 pru_send_thread.start()
 
-pru_pump_thread = PRU_pump(stopped, sock)
-pru_pump_thread.start()
-
 pypruss.exec_program(TARGET_PRU_NO, TARGET_PRU_FW)
 
 
@@ -289,6 +265,5 @@ signal.signal(signal.SIGINT, signal_handler)
 
 pru_stop_thread.join()
 pru_send_thread.join()
-pru_pump_thread.join()
 
 pypruss.exit()
