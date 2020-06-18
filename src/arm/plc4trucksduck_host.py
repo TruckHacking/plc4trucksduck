@@ -61,23 +61,6 @@ TX_RING_BUFFER_VADDR_OFFSET = 28  # must match the same in plc4trucksduck.c
 
 MAX_PAYLOAD_SIZE = 255  # corresponds to 321 special bits payload bytes above
 
-def get_checksum_bits(payload):
-    msg = str(bitstring.ConstBitArray(bytes=payload).bin)
-    checksum = 0
-    for n in range(0,len(msg),8):
-        checksum = checksum + int(msg[n:n+8],2)
-
-    # Two's Complement (10)
-    binint = int("{0:b}".format(checksum))             # Convert to binary (1010)
-    flipped = ~binint                                  # Flip the bits (-1011)
-    flipped += 1                                       # Add one (two's complement method) (-1010)
-    intflipped=int(str(flipped),2)                     # Back to int (-10)
-    intflipped = ((intflipped + (1 << 8)) % (1 << 8))  # Over to binary (246) <-- .uint
-    intflipped = '{0:08b}'.format(intflipped)          # Format to one byte (11110110) <-- same as -10.bin
-
-    checksum_bits = bitstring.BitArray(bin=intflipped)
-    return checksum_bits
-
 def get_special_preamble_bits(preamble_mid):
     mid_bits = bitstring.BitArray(bytes=preamble_mid)
     return mid_bits
@@ -85,7 +68,7 @@ def get_special_preamble_bits(preamble_mid):
 def get_special_payload_bits(payload):
     payload_bits = bitstring.BitArray()
 
-    for b_int in bytes(payload):
+    for b_int in bytes(payload): # assumes the checksum byte is _in_ `payload`
         b_bits = bitstring.BitArray(bytes=b_int)
         b_bits.reverse()
 
@@ -93,12 +76,6 @@ def get_special_payload_bits(payload):
         payload_bits.append(b_bits) # bit-reversed byte
         payload_bits.append(bitstring.ConstBitArray(bin='1')) # stop bit
 
-    checksum_bits = get_checksum_bits(payload)
-    checksum_bits.reverse()
-
-    payload_bits.append(bitstring.ConstBitArray(bin='0'))
-    payload_bits.append(checksum_bits)
-    payload_bits.append(bitstring.ConstBitArray(bin='1'))
     return payload_bits
 
 class PRU_read_thread(threading.Thread):
