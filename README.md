@@ -24,8 +24,7 @@ All sources here -- with the exception of `src/arm/BB-TRUCKCAPE-00A0.dts` -- are
   * no error handling or reporting
   * known to occasionally return extra bytes on J1708 frames received
   * known to occasionally lock-up / stop receiving
-  * can only send 42 byte payloads TODO
-  * drops send frames on TX buffer full TODO
+  * can buffer frames for TX up to the UDP on localhost limit
   * drop receive frames on RX buffer full TODO
 
 * PLC write on Truck Duck expansion
@@ -34,10 +33,9 @@ All sources here -- with the exception of `src/arm/BB-TRUCKCAPE-00A0.dts` -- are
   * no frame detect implemented TODO
   * minimal error handling
   * known to be using the dumbest PWM method possible (but it works)
-  * can only send 42 byte payloads TODO
-  * drops send frames on TX buffer full TODO
+  * can buffer frames for TX up to the UDP on localhost limit
   * drop receive frames on RX buffer full TODO
-  * cannot send disting PLC preamble ID and J1708 payload MID TODO
+  * cannot send different PLC preamble ID and J1708 payload MID TODO
   * not confirmed to be able to be received by all trailer brake controllers TODO
 
 * PLC read on Truck Duck expansion
