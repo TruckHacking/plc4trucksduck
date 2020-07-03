@@ -1,6 +1,25 @@
 PRU_CGT:=/usr/share/ti/cgt-pru
-TI_AM335X:=/opt/ti-sdk-am335x-evm-07.00.00.00
 PRU_SUPPORT:=/opt/pru-software-support-package
+
+CLPRU=clpru
+ifeq (, $(shell which clpru))
+	CLPRU=$(PRU_CGT)/usr/bin/clpru
+endif
+
+HEXPRU=hexpru
+ifeq (, $(shell which hexpru))
+	HEXPRU=$(PRU_CGT)/usr/bin/hexpru
+endif
+
+PRU_INC=$(PRU_CGT)/usr/share/ti/cgt-pru/include
+ifeq (, $(wildcard $(PRU_INC)))
+	PRU_INC=$(PRU_CGT)/include
+endif
+
+PRU_LIBC=$(PRU_CGT)/usr/share/ti/cgt-pru/lib/libc.a
+ifeq (, $(wildcard $(PRU_LIBC)))
+	PRU_LIBC=$(PRU_CGT)/lib/libc.a
+endif
 
 ARM_SRC_DIR=src/arm
 ARM_BUILD_DIR=src/arm/build
@@ -31,9 +50,9 @@ PRU_BINS=$(J17084TRUCKDUCK_BINS) $(PLC4TRUCKSDUCK_BINS)
 
 STACK_SIZE=$(shell expr 8 + 8 + 8 + 8 + 342 + 64)  # from inspection of plc4trucksduck.asm 8+8+8+8+0xff+0x57 + 64 slop
 CFLAGS=--c99 --silicon_version=3 -o1 --keep_asm --asm_directory=$(PRU_GEN_DIR) --obj_directory=$(PRU_GEN_DIR) --pp_directory=$(PRU_GEN_DIR) -ss --symdebug:none --display_error_number --diag_remark=1119
-INC=-I$(TI_AM335X)/example-applications/pru/include -I$(PRU_CGT)/usr/share/ti/cgt-pru/include -I$(PRU_SUPPORT)/include -I$(PRU_SUPPORT)/include/am335x
+INC=-I$(PRU_INC) -I$(PRU_SUPPORT)/include -I$(PRU_SUPPORT)/include/am335x
 LFLAGS=--stack_size=$(STACK_SIZE)
-LIBS=--library=$(PRU_CGT)/usr/share/ti/cgt-pru/lib/libc.a
+LIBS=--library=$(PRU_LIBC)
 
 all: $(PRU_BINS) $(DTB_OFILES)
 
@@ -61,10 +80,10 @@ $(PRU_BUILD_DIR):
 	mkdir -p $(PRU_BUILD_DIR)
 
 $(PRU_GEN_DIR)/%.fw : $(PRU_SRC_DIR)/%.c | $(PRU_GEN_DIR)
-	$(PRU_CGT)/usr/bin/clpru $(CFLAGS) $(INC) $^ --run_linker $(LFLAGS) $(LIBS) --library=$(PRU_SUPPORT)/examples/am335x/PRU_PRUtoARM_Interrupt/AM335x_PRU.cmd --output_file=$@ -m$(patsubst %.fw,%.map,$@)
+	$(CLPRU) $(CFLAGS) $(INC) $^ --run_linker $(LFLAGS) $(LIBS) --library=$(PRU_SUPPORT)/examples/am335x/PRU_PRUtoARM_Interrupt/AM335x_PRU.cmd --output_file=$@ -m$(patsubst %.fw,%.map,$@)
 
 $(PRU_BUILD_DIR)/%.bin $(PRU_GEN_DIR)/%_data.bin : $(PRU_SRC_DIR)/%.cmd $(PRU_GEN_DIR)/%.fw | $(PRU_BUILD_DIR) $(PRU_GEN_DIR)
-	$(PRU_CGT)/usr/bin/hexpru $^
+	$(HEXPRU) $^
 
 clean:
 	rm -rf $(PRU_GEN_DIR) $(PRU_BUILD_DIR) $(ARM_BUILD_DIR)
