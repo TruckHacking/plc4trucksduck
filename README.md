@@ -18,6 +18,63 @@ All sources here -- with the exception of `src/arm/BB-TRUCKCAPE-00A0.dts` -- are
 5. Build the PRU binaries and device tree overlays with `make`
 6. Install them, the services for J1708 and PLC and disable the old TruckDuck J1708 stuff with `sudo make install`
 7. First time installs will require a reboot at this point
+8. You can confirm that the PRU is running the J1708 and PLC code checking `initctl status j17084truckduck` and `initctl status plc4trucksduck`
+
+No hardware modifications are necessary to use J1708 with this package. To use PLC, a capacitor and a couple bodge wires must be installed on your TruckDuck.
+
+1. TODO
+2. TODO
+3. TODO
+
+## Usage
+
+Utility commands `j1708dump.py` and `j1708send.py` are installed to enable command-line scripting. But also anything built with https://github.com/TruckHacking/py-hv-networks and https://github.com/JamesWJohnson/TruckCapeProjects will work. The J1708 (1) interface is unchanged and PLC is substituted for the J1708 (2) interface.
+
+```sh
+$ j1708dump.py --help
+usage: j1708dump.py [-h] [--interface [{j1708,j1708_2,plc}]]
+                    [--show-checksums [{true,false}]]
+                    [--validate [{true,false}]] [--show [SHOW]]
+                    [--hide [HIDE]]
+
+frame dumping utility for J1708 and PLC on truckducks
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --interface [{j1708,j1708_2,plc}]
+                        choose the interface to dump from
+  --show-checksums [{true,false}]
+                        show frame checksums
+  --validate [{true,false}]
+                        discard frames with invalid checksums
+  --show [SHOW]         specify a candump-like filter; frames matching this
+                        filter will be shown. Processed before hide filters.
+                        e.g. "ac:ff" to show only MID 0xAC frames
+  --hide [HIDE]         specify a candump-like filter; frames matching this
+                        filter will be hidden. e.g. "89:ff" to hide MID 0x89
+                        frames
+```
+
+```sh
+$ j1708send.py --help
+usage: j1708send.py [-h] [--interface [{j1708,j1708_2,plc}]]
+                    [--checksums [{true,false}]]
+                    hexbytes
+
+frame sending utility for J1708 and PLC on truckducks
+
+positional arguments:
+  hexbytes              a j1708 or plc message to send e.g. '0a00' or '0a,00'
+                        or '0a#00' or '(123.123) j1708 0a#00'
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --interface [{j1708,j1708_2,plc}]
+                        choose the interface to send frames to
+  --checksums [{true,false}]
+                        add checksums to frames sent
+```
+
 
 ## Features
 
