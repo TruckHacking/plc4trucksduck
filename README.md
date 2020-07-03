@@ -11,11 +11,9 @@ All sources here -- with the exception of `src/arm/BB-TRUCKCAPE-00A0.dts` -- are
 ## Installing
 
 1. starting with the truckhacking.github.io image http://truckduck.sixvolts.org/images/truck-duck-25aug2016.img.xz
-2. install TI PRU C compiler `ti_cgt_pru_2.1.1_armlinuxa8hf_busybox_installer.sh` from http://downloads.ti.com/codegen/esd/cgt_public_sw/PRU/2.1.1/ti_cgt_pru_2.1.1_armlinuxa8hf_busybox_installer.sh
-3. install SDK: both http://downloads.ti.com/sitara_linux/esd/AM335xSDK/exports/ti-sdk-am335x-evm-07.00.00.00-Linux-x86-Install.bin and http://software-dl.ti.com/sitara_linux/esd/PRU-SWPKG/01_00_00_00/exports/pru-addon-v1.0-Linux-x86-Install.bin on a 32-bit x86 capable system
-4. transfer the resulting install directories to the beaglebone
-5. get pru-support-package onto the beaglefone from git: `git clone https://git.ti.com/cgit/pru-software-support-package/pru-software-support-package/`
-6. set Makefile variables `PRU_CGT`, `TI_AM335X` and `PRU_SUPPORT` (via edits or via env) to point to above
+2. install TI PRU C compiler `wget http://downloads.ti.com/codegen/esd/cgt_public_sw/PRU/2.1.1/ti_cgt_pru_2.1.1_armlinuxa8hf_busybox_installer.sh; sudo bash -x ti_cgt_pru_2.1.1_armlinuxa8hf_busybox_installer.sh` . Default install location is `/usr/share/ti/cgt-pru/lib/`
+3. get pru-support-package onto the beaglebone from git: `cd /opt; sudo git clone https://git.ti.com/cgit/pru-software-support-package/pru-software-support-package/`
+4. If you used locations other than the default, set Makefile variables `PRU_CGT` and `PRU_SUPPORT` (via edits or via env) to point to above.
 
 ## Features
 
@@ -24,7 +22,8 @@ All sources here -- with the exception of `src/arm/BB-TRUCKCAPE-00A0.dts` -- are
   * no error handling or reporting
   * known to occasionally return extra bytes on J1708 frames received
   * known to occasionally lock-up / stop receiving
-  * can buffer frames for TX up to the UDP on localhost limit
+  * can only send 42 byte payloads TODO
+  * drops send frames on TX buffer full TODO
   * drop receive frames on RX buffer full TODO
 
 * PLC write on Truck Duck expansion
@@ -33,9 +32,10 @@ All sources here -- with the exception of `src/arm/BB-TRUCKCAPE-00A0.dts` -- are
   * no frame detect implemented TODO
   * minimal error handling
   * known to be using the dumbest PWM method possible (but it works)
-  * can buffer frames for TX up to the UDP on localhost limit
+  * can only send 42 byte payloads TODO
+  * drops send frames on TX buffer full TODO
   * drop receive frames on RX buffer full TODO
-  * cannot send different PLC preamble ID and J1708 payload MID TODO
+  * cannot send disting PLC preamble ID and J1708 payload MID TODO
   * not confirmed to be able to be received by all trailer brake controllers TODO
 
 * PLC read on Truck Duck expansion
