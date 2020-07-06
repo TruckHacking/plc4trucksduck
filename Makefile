@@ -102,6 +102,7 @@ install: $(DTB_OFILES)
 	install -m 700 $(ARM_SRC_DIR)/plc4trucksduck_host.py /usr/local/bin/
 	install -m 600 $(PRU_BUILD_DIR)/plc4trucksduck.bin /lib/firmware
 	install -m 644 $(ARM_SRC_DIR)/plc4trucksduck.conf /etc/init/
+	install -m 644 $(ARM_SRC_DIR)/pru4trucksduck.conf /etc/init/
 	install -m 755 $(ARM_SRC_DIR)/j1708send.py /usr/local/bin/
 	install -m 755 $(ARM_SRC_DIR)/j1708dump.py /usr/local/bin/
 	@echo NOTE /// You must reboot before you can load $(THIS_DTB_OFILE) ///
