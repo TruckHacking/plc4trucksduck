@@ -42,14 +42,14 @@ If the Truck Duck is powered from the 5V barrel jack on the Beagle Bone then the
 
 The J1708_2 channel on the Truck Duck is non-functional. Re-purpose the 17-2H or 17-2L screw terminals on P3 to be the PLC output by first removing (or rotating to disconnect) R15 and R16. Add a 0.1uF capacitor to the P3-side pad of the removed resistor (e.g. R16 below) and connect the capacitor to P9.29 with a flying lead.
 
-<img src="media/5V_power_td1.0_mods.jpg?raw=true" align=center width=100>
+<img src="media/5V_power_td1.0_mods.jpg?raw=true" align=center width=300>
 
 #### Truck Duck 1.5
 
 There is an unused screw terminal on P4. Attach a 0.1uF capacitor to the underside of P4's screw terminal pin and connect the capacitor to P9.29 with a flying lead (threading through a via to cross the board).
 
-<img src="media/5V_power_td1.5_mods1.jpg?raw=true" align=center width=100>
-<img src="media/5V_power_td1.5_mods2.jpg?raw=true" align=center width=100>
+<img src="media/5V_power_td1.5_mods1.jpg?raw=true" align=center width=300>
+<img src="media/5V_power_td1.5_mods2.jpg?raw=true" align=center width=300>
 
 ### Truck Duck Powered by 12V (or 5V)
 
@@ -67,9 +67,9 @@ Solder the 'inductor' to the via side of PTC1 and to the via.
 
 Attach a 0.1uF capacitor to the underside pin of '12V IN' on P3. Connect the capacitor to P9.29 with a flying lead, wrapping around the board edge. Secure the flying lead with glue on both sides of the board near the board edge.
 
-<img src="media/12V_power_td1.5_mods1.jpg?raw=true" align=center width=100>
-<img src="media/12V_power_td1.5_mods2.jpg?raw=true" align=center width=100>
-<img src="media/12V_power_td1.5_mods3.jpg?raw=true" align=center width=100>
+<img src="media/12V_power_td1.5_mods1.jpg?raw=true" align=center width=300>
+<img src="media/12V_power_td1.5_mods2.jpg?raw=true" align=center width=300>
+<img src="media/12V_power_td1.5_mods3.jpg?raw=true" align=center width=300>
 
 ### Longer Range PLC Signals
 
