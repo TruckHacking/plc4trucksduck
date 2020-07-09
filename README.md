@@ -132,20 +132,20 @@ optional arguments:
   * no error handling or reporting
   * known to occasionally return extra bytes on J1708 frames received
   * known to occasionally lock-up / stop receiving
-  * can only send 42 byte payloads TODO
-  * drops send frames on TX buffer full TODO
+  * drops send frames on (UDP socket) buffer full
+  * can send and receive 255 byte payloads
   * drop receive frames on RX buffer full TODO
 
 * PLC write on Truck Duck expansion
-  * requires an AC coupling circuit from P9.29 to the power lines of the target such that 100Khz and above is passed. Details TODO
+  * requires an AC coupling circuit from P9.29 to the power lines of the target such that 100Khz and above is passed
   * no arbitration implemented
   * no frame detect implemented TODO
   * minimal error handling
   * known to be using the dumbest PWM method possible (but it works)
-  * can only send 42 byte payloads TODO
-  * drops send frames on TX buffer full TODO
-  * drop receive frames on RX buffer full TODO
-  * cannot send disting PLC preamble ID and J1708 payload MID TODO
+  * drops send frames on (UDP socket) buffer full
+  * drop receive frames on RX buffer full
+  * can send and receive 255 byte payloads
+  * cannot send distinct PLC preamble ID and J1708 payload MID from command line TODO
   * not confirmed to be able to be received by all trailer brake controllers TODO
 
 * PLC read on Truck Duck expansion
