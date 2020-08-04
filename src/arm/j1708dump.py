@@ -111,6 +111,12 @@ if __name__ == '__main__':
 			if skip_this_message:
 				continue
 
+			if messagebits is None:
+				messagebits = bitstring.ConstBitArray(message)
+			if messagebits.len < 8:
+				sys.stderr.write('short frame "%s"\n' % messagebits)
+				continue
+
 			if args.validate == 'true':
 				if messagebits is None:
 					messagebits = bitstring.ConstBitArray(message)
