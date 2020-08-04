@@ -111,13 +111,20 @@ if __name__ == '__main__':
 			if skip_this_message:
 				continue
 
-			if args.validate == 'true':
-				if messagebits is None:
-					messagebits = bitstring.ConstBitArray(message)
-				checkbits = get_checksum_bits(message[:-1])
-				if checkbits.bytes[0] != messagebits.bytes[-1]:
+			if messagebits is None:
+				messagebits = bitstring.ConstBitArray(message)
+			if messagebits.len < 8:
+				sys.stderr.write('short frame "%s"\n' % messagebits)
+				continue
+
+			comment = ''
+			checkbits = get_checksum_bits(message[:-1])
+			if checkbits.bytes[0] != messagebits.bytes[-1]:
+				if args.validate == 'true':
 					continue
+				else:
+					comment = '; invalid checksum'
 
 			if args.show_checksums == 'false':
 				message = message[:-1]
-			print("(%.6f) %s %s" % (time.monotonic(), args.interface, message.hex()))
+			print("(%.6f) %s %s %s" % (time.monotonic(), args.interface, message.hex(), comment))
