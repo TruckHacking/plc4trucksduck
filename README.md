@@ -4,6 +4,8 @@ A PLC writing tool for the Truck Duck beaglebone based heavy vehicle diagnostic 
 
 For information on the Truck Duck, see https://github.com/TruckHacking. A great big thank you to @haystack-ia and @sixvolts for creating this wonderful open tool.
 
+For receiving PLC4TRUCKS signals, use an SDR and the https://github.com/ainfosec/gr-j2497 project. Also, the https://github.com/ainfosec/pretty_j1587 project can give you detailed decodings of those signals received.
+
 This repo also contains also a reimplementation of the J1708 Truck Duck feature under new license. This should be a drop-in replacement for J1708 on the Truck Duck and is compatible with scripts from https://github.com/TruckHacking/py-hv-networks and https://github.com/JamesWJohnson/TruckCapeProjects
 
 All sources here -- with the exception of `src/arm/BB-TRUCKCAPE-00A0.dts` -- are licensed under an MIT license. Alternative licenses for commercial use are available on request; please contact urban.jonson@nmfta.org . The device tree overlay source file `src/arm/BB-TRUCKCAPE-00A0.dts` is imported from the Truck Duck project with modifications and is licensed under GPL v2.
