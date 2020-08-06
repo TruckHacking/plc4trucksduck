@@ -24,6 +24,10 @@ import argparse
 import socket
 import sys
 import time
+import functools
+
+#don't buffer output
+print = functools.partial(print, flush=True)
 
 default_interface = 'plc' #TODO make this based on exec name
 
