@@ -61,9 +61,9 @@ def get_checksum_bits(payload):
 
 
 if __name__ == '__main__':
-	hexinput = hexinput.strip()
+	hexinput = args.hexbytes.strip()
 	hexinput = hexinput.split(';')[0]
-	hexinput = args.hexbytes.split(' ')[-1]
+	hexinput = hexinput.split(' ')[-1]
 	hexinput = hexinput.replace(',','')
 	hexinput = hexinput.replace('#','')
 	message = bitstring.BitArray(hex=hexinput)
