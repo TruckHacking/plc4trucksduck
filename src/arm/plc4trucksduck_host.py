@@ -130,8 +130,7 @@ class PRU_read_thread(threading.Thread):
                                   self.ddr_mem[self.frames_ptr+1:
                                                self.frames_ptr+1+length])
 
-                #TODO remote debug prints
-                sys.stderr.write('rx ' + str(frame) + '\n')
+                #sys.stderr.write('rx ' + str(frame) + '\n')
 
                 consume = (consume + 1) % RX_RING_BUFFER_LEN
                 self.frames_ptr = self.frames_base + \
@@ -207,8 +206,7 @@ class PRU_write_thread(threading.Thread):
             self.ddr_mem[self.struct_start:self.struct_start +
                          TX_RING_BUFFER_CONSUME_OFFSET] = \
                 struct.pack('L', produce)
-            #TODO remove debug prints
-            sys.stderr.write("tx preamble:%s payload:%s bit_length:%d\n" % (preamble_bits, payload_bits, payload_bits.len))
+            #sys.stderr.write("tx preamble:%s payload:%s bit_length:%d\n" % (preamble_bits, payload_bits, payload_bits.len))
 
 pypruss.modprobe()
 
