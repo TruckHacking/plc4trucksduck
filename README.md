@@ -28,38 +28,64 @@ No hardware modifications are necessary to use J1708 with this package. To use P
 
 To send PLC signals some hardware modifications are needed. The Truck Duck power supply is very good at attenuating PLC signals on any 12V supply line it is attached to. For that reason we provide a simple modification to perform that will work only in the case that the Truck Duck is connected to 5V power and also a more involved set of modifications for that will work in either case of powering the Truck Duck from 5V or from 12V.
 
-Also, these basic modifications result in a small amplitude PLC signal (1-2VPP) which will be sufficient for bench testing or small vehicle networks but more juice will be required for many applications. For this reason we also provide slightly more complicated modifications which will re-purpose unused components on the Truck Duck to create higher amplitude PLC signals.
+Also, these basic modifications result in a small amplitude PLC signal (1-2VPP) which will be sufficient for bench testing or small vehicle networks but more juice will be required for many applications. For this reason we will also -- eventually -- provide slightly more complicated modifications which will re-purpose unused components on the Truck Duck to create higher amplitude PLC signals (TODO).
 
-We will aim to provide modification instructions for all of the following Truck Duck variations:
-* Truck Duck (DEFCON 24)
-* University of Tulsa Truck Cape (TODO)
-* Truck Duck v1.5
-* Truck Duck MEGA (TODO)
+We will aim to provide modification instructions for all of the Truck Duck variations. There are two options for each of the modifications, depending on how you intend to power your Truck Duck. If you intend to power your Truck Duck via the BBB DC 5V barrel jack connector then (in most cases) the modifications are more straightforward.
+
+| Truck Duck Type | Powered by 5V Mods | Powered by Vechile Mods |
+|-----------------|--------------------|-------------------------|
+| Truck Duck (DEFCON 24)  | Connect a 0.1uF capacitor between P9.29 and unused screw terminal for PLC output. | Also put an inductor between the PTC fuse at power supply input and connect the PLC output directly to vehicle power on connectors. |
+| University of Tulsa Truck Cape  |  Disconnect both C10 power supply filtering capacitor and input protection diode D1 from vehicle power. Connect a 0.1uF capacitor between P9.29 and vehicle power connector.  |  Also put an inductor between the D1 input and vehicle power and connect C10 to the low side of PTC1. |
+| Truck Duck v1.5  | Connect a 0.1uF capacitor between P9.29 and unused screw terminal for PLC output. | Also put an inductor between the PTC fuse at power supply input and connect the PLC output directly to vehicle power on connectors. |
+| Truck Duck MEGA (TODO)  |   |    |
+
+Please see the following subsections for more details.
 
 ### Truck Duck Powered by 5V
 
 If the Truck Duck is powered from the 5V barrel jack on the Beagle Bone then there is no need to filter the input to the Truck Duck 12V supply as in the next section.
 
-#### Truck Duck (DEFCON 24)
+#### Powered by 5V: Truck Duck (DEFCON 24)
 
 The J1708_2 channel on the Truck Duck is non-functional. Re-purpose the 17-2H or 17-2L screw terminals on P3 to be the PLC output by first removing (or rotating to disconnect) R15 and R16. Add a 0.1uF capacitor to the P3-side pad of the removed resistor (e.g. R16 below) and connect the capacitor to P9.29 with a flying lead.
 
 <img src="media/5V_power_td1.0_mods.jpg?raw=true" align=center width=300>
 
-#### Truck Duck 1.5
+#### Powered by 5V: Truck Duck 1.5
 
 There is an unused screw terminal on P4. Attach a 0.1uF capacitor to the underside of P4's screw terminal pin and connect the capacitor to P9.29 with a flying lead (threading through a via to cross the board).
 
 <img src="media/5V_power_td1.5_mods1.jpg?raw=true" align=center width=300>
 <img src="media/5V_power_td1.5_mods2.jpg?raw=true" align=center width=300>
 
-### Truck Duck Powered by 12V (or 5V)
+#### Powered by 5V: University of Tulsa Truck Cape
+
+The Truck Cape has an power input filtering capacitor (C10) which, if left connected, will attenuate all PLC4TRUCKS signals on the vehicle power bus to which it is connected. Even if you intend to power your Truck Cape from 5V only, you need to disconnect this capacitor and the rest of vehicle power input.
+
+Desolder and lift the capacitor leg of C10 that is connected to vehicle power -- marked by a square plated through-hole. Then desolder and lift the leg of D1 that is connected to vehicle power -- the side which is _not_ marked by a square plated through-hole.
+
+<img src="media/5V_truckcape_leglifts.jpg?raw=true" align=center width=300>
+
+Then connected P9.29 to the vehicle power. Add a 0.1uF capacitor to the DB-15 pin marked `12V` and connect that capacitor to P9.29 with a short length of bodge wire. Secure the wire with adhesive (ignore the brown and orange bodge wires in the photo below -- they came factory installed).
+
+<img src="media/5V_truckcape_addcap.jpg?raw=true" align=center width=300>
+<img src="media/5V_truckcape_bodge.jpg?raw=true" align=center width=300>
+
+### Truck Duck Powered by Vehicle (12V)
 
 The Truck Duck 12V power supply will greatly attenuate any PLC signals on the lines connected to it. Some amount of wire between the 12V input and the PLC transmitter appears to alleviate this problem. Experiments on the bench indicate that between 40 and 72 inches of wire should be between the Truck Duck 12V input and a PLC transmitter.
 
 When you want to use the Truck Duck itself to send PLC signals onto the 12V lines to which it is connected, some length of wire needs to be inserted. This could probably also be done with an inductor instead. But we all have some hook-up wire laying around, so we can make an inductor. It doesn't even need to be precise for it to work.
 
-#### Truck Duck 1.5
+#### Powered by Vehicle: Truck Duck (DEFCON 24)
+
+An inductor needs to be inserted between the power supply input and vehicle power. It is convenient to do this at the high side of the PTC fuse by cutting a trace. Only a small amount of inductance is required which can be satisfied by adding a coiled piece of wire.
+
+<img src="media/12V_power_td1.0_mods.jpg?raw=true" align=center width=300>
+
+The modification steps are identical to the *Powered by Vehicle: Truck Duck 1.5*, please see below.
+
+#### Powered by Vehicle: Truck Duck 1.5
 
 Cut the trace between the via and PTC1. Optionally re-cover with solder resist. If you aren't going to re-apply solder resist be very careful not to expose the copper ground plane when cutting the trace. You don't want to short the 12V input to ground accidentally when using your Truck Duck later.
 
@@ -72,6 +98,16 @@ Attach a 0.1uF capacitor to the underside pin of '12V IN' on P3. Connect the cap
 <img src="media/12V_power_td1.5_mods1.jpg?raw=true" align=center width=300>
 <img src="media/12V_power_td1.5_mods2.jpg?raw=true" align=center width=300>
 <img src="media/12V_power_td1.5_mods3.jpg?raw=true" align=center width=300>
+
+#### Powered by Vehicle: University of Tulsa Truck Cape
+
+An inductor needs to be added between power supply filtering input and vehicle power. The disconnected C10 input filtering capacitor also should be reconnected on the low side of the added inductor. Only a small amount of inductance is required which could be satisfied by adding a coiled piece of wire; however, for this set of modifications we are showing adding a 100uH SMD inductor by glueing it dead-bug to the board.
+
+<img src="media/12V_truckcape_gluedinduction.jpg?raw=true" align=center width=300>
+
+Connect vehicle power to one side of the inductor and then the lifted leg of D1 to the other side. Then, finally, reconnect the input filtering capacitor C10 to the high side of Z1.
+
+<img src="media/12V_truckcape_reconnection.jpg?raw=true" align=center width=300>
 
 ### Longer Range PLC Signals
 
