@@ -31,7 +31,7 @@ import queue
 #don't buffer output
 print = functools.partial(print, flush=True)
 
-default_interface = 'plc' #TODO make this based on exec name
+default_interface = 'j1708' #TODO make this based on exec name
 
 parser = argparse.ArgumentParser(description='frame dumping utility for J1708 and PLC on truckducks')
 parser.add_argument('--interface', default=default_interface, const=default_interface,
