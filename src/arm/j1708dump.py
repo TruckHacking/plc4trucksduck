@@ -25,11 +25,13 @@ import socket
 import sys
 import time
 import functools
+from scapy.all import UDP,AsyncSniffer
+import queue
 
 #don't buffer output
 print = functools.partial(print, flush=True)
 
-default_interface = 'plc' #TODO make this based on exec name
+default_interface = 'j1708' #TODO make this based on exec name
 
 parser = argparse.ArgumentParser(description='frame dumping utility for J1708 and PLC on truckducks')
 parser.add_argument('--interface', default=default_interface, const=default_interface,
@@ -45,6 +47,8 @@ parser.add_argument('--show', nargs='?', action='append',
 	help='specify a candump-like filter; frames matching this filter will be shown. Processed before hide filters. e.g. "ac:ff" to show only MID 0xAC frames')
 parser.add_argument('--hide', nargs='?', action='append',
 	help='specify a candump-like filter; frames matching this filter will be hidden. e.g. "89:ff" to hide MID 0x89 frames')
+parser.add_argument('--promiscuous', '-P', action='store_true',
+	help='perform j1708 capture in promiscuous mode, dumps without interfering with other j1708 consumers, requires privs')
 
 args = parser.parse_args()
 
@@ -85,50 +89,92 @@ def is_filter_applies(phil, messagebits):
 	testmessage = messagebits[:masklen]
 	return (testmessage & mask[:testmessage.len]).hex == val
 
-if __name__ == '__main__':
-	with socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM) as sock:
+sock=None
+q=None
+skip=0 # loopback interface duplicates packets, need to skip every second one
+scapy_thread=None
+def init_source():
+	global sock
+	global scapy_thread
+	global q
+	if args.promiscuous:
+		q = queue.Queue()
+		def doit(x):
+			global skip
+			if skip == 0:
+				q.put(x.load)
+				skip = 1
+			else:
+			    skip = 0
+
+		scapy_thread = AsyncSniffer(iface='lo', filter="udp port %s" % READ_PORT, prn=doit)
+		scapy_thread.start()
+	else:
+		sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 		sock.bind(('localhost', READ_PORT))
-		while True:
-			message = sock.recv(256)
 
-			skip_this_message = False
-			messagebits = None
+def get_one_message():
+	global sock
+	global q
+	if args.promiscuous:
+		return q.get()
+	else:
+		return sock.recv(256)
 
-			if not args.show is None:
-				skip_this_message = True
+def main():
+	init_source()
+	while True:
+		message = get_one_message()
 
-				if messagebits is None:
-					messagebits = bitstring.ConstBitArray(message)
-				for phil in args.show:
-					if is_filter_applies(phil, messagebits):
-						skip_this_message = False
-						break
+		skip_this_message = False
+		messagebits = None
 
-			if not args.hide is None:
-				if messagebits is None:
-					messagebits = bitstring.ConstBitArray(message)
-				for phil in args.hide:
-					if is_filter_applies(phil, messagebits):
-						skip_this_message = True
-						break
-
-			if skip_this_message:
-				continue
+		if not args.show is None:
+			skip_this_message = True
 
 			if messagebits is None:
 				messagebits = bitstring.ConstBitArray(message)
-			if messagebits.len < 8:
-				sys.stderr.write('short frame "%s"\n' % messagebits)
+			for phil in args.show:
+				if is_filter_applies(phil, messagebits):
+					skip_this_message = False
+					break
+
+		if not args.hide is None:
+			if messagebits is None:
+				messagebits = bitstring.ConstBitArray(message)
+			for phil in args.hide:
+				if is_filter_applies(phil, messagebits):
+					skip_this_message = True
+					break
+
+		if skip_this_message:
+			continue
+
+		if messagebits is None:
+			messagebits = bitstring.ConstBitArray(message)
+		if messagebits.len < 8:
+			sys.stderr.write('short frame "%s"\n' % messagebits)
+			continue
+
+		comment = ''
+		checkbits = get_checksum_bits(message[:-1])
+		if checkbits.bytes[0] != messagebits.bytes[-1]:
+			if args.validate == 'true':
 				continue
+			else:
+				comment = '; invalid checksum'
 
-			comment = ''
-			checkbits = get_checksum_bits(message[:-1])
-			if checkbits.bytes[0] != messagebits.bytes[-1]:
-				if args.validate == 'true':
-					continue
-				else:
-					comment = '; invalid checksum'
+		if args.show_checksums == 'false':
+			message = message[:-1]
+		print("(%.6f) %s %s %s" % (time.monotonic(), args.interface, message.hex(), comment))
 
-			if args.show_checksums == 'false':
-				message = message[:-1]
-			print("(%.6f) %s %s %s" % (time.monotonic(), args.interface, message.hex(), comment))
+
+if __name__ == '__main__':
+	try:
+		main()
+	except (KeyboardInterrupt):
+		pass
+	if not scapy_thread is None:
+	    scapy_thread.stop()
+	    scapy_thread = None
+	sys.exit()
