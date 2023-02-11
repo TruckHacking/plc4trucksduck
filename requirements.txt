@@ -4,7 +4,7 @@ decorator==4.4.0
 entrypoints==0.3
 flake8==3.7.9
 ipdb==0.12
-ipython==7.5.0
+ipython==8.10.0
 ipython-genutils==0.2.0
 jedi==0.14.0
 mccabe==0.6.1
